@@ -1,0 +1,33 @@
+<script>
+  const { PythonShell } = require("python-shell");
+  const { ipcRenderer } = require("electron");
+  const path = require("path");
+
+  ipcRenderer.on("START_PROCESSING", (event, args) => {
+    // let pyshell = new PythonShell(
+    //   path.join(__dirname, "/../scripts/factorial.py"),
+    //   {
+    //     pythonPath: "python3",
+    //     args: [data]
+    //   }
+    // );
+    const { data } = args;
+    const stringArgs = JSON.stringify(data);
+    var options = {
+      pythonPath: "python3",
+      args: [stringArgs]
+    };
+
+    let pyshell = new PythonShell(
+      path.join(__dirname, "/../scripts/backend.py"),
+      options
+    );
+
+    pyshell.on("message", function(results) {
+      console.log(results);
+      ipcRenderer.send("MESSAGE_FROM_BACKGROUND", { message: results });
+    });
+  });
+
+  ipcRenderer.send("BACKGROUND_READY");
+</script>

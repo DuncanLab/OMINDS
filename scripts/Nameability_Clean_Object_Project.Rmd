@@ -1,0 +1,219 @@
+---
+title: "Nameability_Clean_Object_Project"
+author: "Sarah"
+date: "11/06/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Load in Data
+
+```{r load packages}
+
+rm(list = ls()) #run this line to clear your environment
+library(tidyverse); library(data.table); library(dtplyr); library(hausekeep); library(tidyr); library(hunspell)
+
+data_dir = "/Users/sarahberger/Desktop/ObjectProject/nameability/"
+
+```
+
+Load relevant data and save csv filename to a new column
+```{r load data}
+relevantData = list.files(path = data_dir, full.names = TRUE)
+
+data = data.table() #create empty datatable
+for (i in relevantData) {
+  print(i)
+  df_temp = tbl_dt(read.csv(i)) #save each iteration of csv file to df_temp
+  df_temp[, filename := i] #create new column in df_temp called filename, reflecting name of file
+  data = rbind(data, df_temp) #bind filename to data 
+}
+
+data = tbl_dt(data)
+
+```
+
+New columns for condition and batch
+```{r new columns to denote condition and batch}
+
+data$group = NULL #remove group col
+
+#identify batches 
+data[grep(pattern = "batch_1", x = filename, ), batch := 1 ]
+data[grep(pattern = "batch_2", x = filename, ), batch := 2 ]
+data[grep(pattern = "batch_3", x = filename, ), batch := 3 ]
+data[grep(pattern = "batch_4", x = filename, ), batch := 4 ]
+data[grep(pattern = "batch_5", x = filename, ), batch := 5 ]
+data[grep(pattern = "batch_6", x = filename, ), batch := 6 ]
+data[grep(pattern = "batch_7", x = filename, ), batch := 7 ]
+data[grep(pattern = "batch_8", x = filename, ), batch := 8 ]
+data[grep(pattern = "batch_9", x = filename, ), batch := 9 ]
+
+```
+
+Create new subject IDs
+```{r create new participant IDs}
+
+data[, n_distinct(subject, batch)] #number of participants
+
+to_assign_ids = data[, .N, keyby = .(subject, batch)] #save new object
+to_assign_ids[, participant := 1:.N] #add new participant column
+to_assign_ids$N = NULL
+
+data = left_join(data, to_assign_ids)
+
+data_full = copy(data)
+
+```
+
+
+```{r clean data table}
+  
+data = subset(data, select= c(participant, batch, blocknum, trialnum, stimulusitem2, response, latency))
+
+data = data[blocknum == "2"]
+data$blocknum = NULL
+```
+
+
+```{r get rid of enter name}
+
+gsub("Enter Name", "", data$response)
+
+data[grep(pattern = "Enter Name", x = response), response_grep := data$response]
+
+write.csv(data, "nameability.csv")
+
+data_clean = read.csv("/Users/sarahberger/Desktop/ObjectProject/old_nameability.csv") #reupload after scoring
+```
+
+## Organize the data table by stimulus
+```{r organize table by stimulus} 
+
+data_clean=tbl_dt(data_clean)
+
+amount = data_clean[, .N, by = stimulusitem2] #how many stimulus presentations for each? Extra batch has double the presentations
+
+data_by_stimulus = data_clean[, .(lower_response, participant, latency, batch), by = stimulusitem2]
+
+data_by_stimulus = data_by_stimulus[, stimulus_presentations := .N, by = stimulusitem2]
+
+unique_responses = data_by_stimulus[, .(unique(c(lower_response)), .N), by = .(stimulusitem2, lower_response, stimulus_presentations, batch)]%>%arrange(stimulusitem2)
+
+unique_responses$V1 = NULL
+
+```
+
+# Calculate stimulus statistics
+
+```{r calculate h-index}
+
+unique_responses[, proportion_response := N/stimulus_presentations]
+
+unique_responses[, h_index := proportion_response*log2(1/proportion_response)]
+
+unique_responses[, h_index_sum := sum(h_index), by = stimulusitem2]
+
+stimulus_by_h_index = unique_responses[, .(unique(stimulusitem2)), by = h_index_sum]%>%arrange(desc(h_index_sum))
+
+names(stimulus_by_h_index)[2] = "stimulusitem2"
+
+```
+
+
+```{r compute modal name}
+
+unique_responses = unique_responses%>%arrange(desc(N))
+
+stimulus_mode = unique_responses[, .SD[1], by = stimulusitem2 ]
+
+nameability_dt = left_join(stimulus_by_h_index, stimulus_mode)
+
+nameability_dt = nameability_dt[, .(stimulusitem2, h_index_sum, lower_response, proportion_response)]
+
+names(nameability_dt)
+names(nameability_dt)[1] = "stimulus"
+names(nameability_dt)[2] = "h_index"
+names(nameability_dt)[3] = "modal_response"
+
+nameability_dt[modal_response == "", modal_response := "na"]
+
+nameability_dt = nameability_dt%>%arrange(stimulus)
+
+
+```
+
+# Check if there are no batch discrepancies
+```{r check if there are no batch discrepencies in h-index}
+
+batch_nameability_dt = left_join(stimulus_by_h_index, stimulus_mode)
+
+mean_h_batch1 = batch_nameability_dt[batch == "1", .(avg_h = mean(h_index_sum), sd_h = sd(h_index_sum))]
+
+mean_h_rest = batch_nameability_dt[batch != "1", .(avg_h = mean(h_index_sum), sd_h = sd(h_index_sum))]
+
+hist(batch_nameability_dt[batch == "1"]$h_index_sum)
+
+hist(batch_nameability_dt[batch != "1"]$h_index_sum)
+
+```
+
+# Spell check
+```{r}
+
+unique_responses$lower_response <- as.character(unique_responses$lower_response)
+
+unique_responses = unique_responses%>%arrange(stimulusitem2)
+
+spellcheck <- hunspell(unique_responses$lower_response)
+
+unique_responses$hunspell <- spellcheck
+
+unique_responses$hunspell <- as.character(unique_responses$hunspell)
+
+unique_responses[, suggested := hunspell_suggest(hunspell)]
+
+unique_responses$suggested <- as.character(unique_responses$suggested)
+
+unique_responses[suggested == "character", suggested := ""]
+
+unique_responses[suggested == "", corrected_response := lower_response]
+
+write_csv(unique_responses, "checkforspelling.csv")
+```
+
+# Reupload after RAs have checked for spelling - NEED TO DO
+
+# Unique modal names
+
+```{r create a uniqueness pass fail}
+
+unique_words = nameability_dt[, .N, by=.(modal_response)]
+unique_words$modal_response = as.character(unique_words$modal_response)
+nonunique_list = unique_words[N > 1,]$modal_response
+
+nameability_dt[modal_response %in% nonunique_list, unique := 0]
+nameability_dt[!modal_response %in% nonunique_list, unique := 1]
+
+```
+
+# Export data to table
+
+```{r}
+write_csv(nameability_dt, "nameability_dt")
+```
+
+
+# Create full table
+
+```{r}
+
+memorability_dt = tbl_dt(read.csv("memorability_dt.csv"))
+orientation_dt = tbl_dt(read.csv("orientation_dt.csv"))
+
+full_dt_pf = left_join(memorability_dt, orientation_dt)
+full_dt_pf = left_join(full_dt_pf, nameability_dt)
+
+write_csv(full_dt_pf, "full_dt_pf")
+```
+

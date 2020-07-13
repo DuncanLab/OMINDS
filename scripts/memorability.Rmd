@@ -1,0 +1,1213 @@
+---
+title: "Memorability data for object project"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+Note: Usually I like to run my code in R notebooks because I can chunk related code together, and also fold chunks so the script gets smaller and feels more manageable. 
+
+I also like to remove the output from appearing inline because I find it is slower than when it appears in the console. To remove output from appearing inline go to the gear icon above and click chunk output in console.
+
+
+
+# Loading data
+
+```{r load packages and set directories}
+
+rm(list = ls()) #run this line to clear your environment
+library(lme4); library(lmerTest); library(tidyverse); library(data.table); library(dtplyr); library(modes); library(mixtools); library(hausekeep)
+
+getwd() # your current directory
+
+data_dir = "/Users/sarahberger/Desktop/ObjectProject/datafiles/" #path where data is stored; depending on where you're running the script, we will need to tweak this
+data_dir = "C:/Users/hanna/Documents/2019-2020/ObjectProject/datafiles/"
+
+# load("C:/Users/hanna/Documents/2019-2020/ObjectProject/data_cleaned.RData")
+# load("C:/Users/hanna/Documents/2019-2020/ObjectProject/objproj_simulations.RData")
+load("C:/Users/hanna/Documents/2019-2020/ObjectProject/simulations.RData")
+# load("/Users/sarahberger/Desktop/ObjectProject/simulations.RData")
+
+```
+
+```{r load data and save CSV filename to a new column}
+relevantData = list.files(path = data_dir, full.names = TRUE)
+
+data = data.table()
+for (i in relevantData) {
+  df_temp = tbl_dt(read.csv(i))
+  df_temp[, filename := i]
+  data = rbind(data, df_temp)
+}
+
+data = tbl_dt(data)
+
+```
+
+```{r new columns to denote condition and batch}
+
+data$group = NULL #remove group col
+
+#identify batches 
+data[grep(pattern = "batch_1.csv", x = filename, ), batch := 1 ]
+data[grep(pattern = "batch_2.csv", x = filename, ), batch := 2 ]
+data[grep(pattern = "batch_3.csv", x = filename, ), batch := 3 ]
+data[grep(pattern = "batch_4.csv", x = filename, ), batch := 4 ]
+data[grep(pattern = "batch_5.csv", x = filename, ), batch := 5 ]
+data[grep(pattern = "batch_6.csv", x = filename, ), batch := 6 ]
+data[grep(pattern = "batch_7.csv", x = filename, ), batch := 7 ]
+data[grep(pattern = "batch_8.csv", x = filename, ), batch := 8 ]
+data[grep(pattern = "batch_9.csv", x = filename, ), batch := 9 ]
+data[grep(pattern = "batch_10.csv", x = filename, ), batch := 10 ]
+
+
+#identify conditions
+data[grep(pattern = "emotional", x = filename, ), condition := "emotional" ]
+data[grep(pattern = "shoebox", x = filename, ), condition := "shoebox" ]
+data[grep(pattern = "memory", x = filename, ), condition := "manmade" ]
+data[grep(pattern = "outdoors", x = filename, ), condition := "outdoor" ]
+
+```
+
+```{r create new participant IDs and arrange by participant}
+# look at the data
+data[, n_distinct(batch), by = condition] #10 batches per condition
+data[, .N, by = .(subject, condition, batch)]%>%print(n=Inf) #participants have 545 rows
+data[, n_distinct(subject, condition, batch)] #number of participants
+
+to_assign_ids = data[, .N, keyby = .(subject, condition, batch)]%>%print(n=Inf) #save new object
+to_assign_ids[, participant := 1:.N] #add new participant column
+to_assign_ids$N = NULL
+
+data = left_join(data, to_assign_ids)
+
+```
+
+```{r arrange and rename variables for convenience, saving full data prior to excluding}
+
+data = data %>% arrange(participant) %>% select(participant, everything()) # arrange by participant
+
+names(data)[8] = "stimulus" # renaming for convenience
+
+# remove unnecessary columns
+data$subject = NULL
+data$filename = NULL
+
+# rename key presses for retrieval phase to be interpretable
+data[blockcode == "retrieval" & response == "36", response := "old"]
+data[blockcode == "retrieval" & response == "37", response := "new"]
+
+# data[blockcode == "encoding", unique(response)] # we will rename encoding keys later (unique to each condition)
+# data[blockcode == "encoding"]$correct = NULL # correct is not applicable for encoding phase
+
+data_full = copy(data) # create copy
+
+```
+
+
+
+# Cleaning data
+
+## Data cleaning round 1: removing participants who did not complete encoding phase
+
+```{r Exclude participants who did not complete encoding phase}
+
+data[blockcode == "encoding", .N, by = participant][N != 175]
+
+exclude_incomplete_encoding = data[blockcode %in% c("encoding"), .N, by = .(participant, blockcode)][N != 175]$participant
+data[blockcode %in% c("retrieval") & !participant %in% c(exclude_incomplete_encoding), .N, by = .(participant, blockcode)][N != 350]
+
+data = data[!participant %in% c(exclude_incomplete_encoding)]
+
+#now all participants have encoded 175 trials; 5 participants did not complete the full recognition phase, but we can include these subjects for now
+
+```
+
+
+
+## Data cleaning round 2: remove trials that were in the instruction slides
+
+```{r remove responses for images used in instruction slides}
+
+# different across conditions
+data = data[
+  (condition == "emotional" & ! stimulus %in% c("Dress_Blue.jpg", "Airplane_Commercial.jpg", "Foam_Acoustic.jpg")) |
+  (condition == "outdoor" & ! stimulus %in% c("Flower_Sun.jpg", "Airplane_Commercial.jpg", "Oven.jpg")) |
+  (condition == "manmade" & ! stimulus %in% c("Flower_Sun.jpg", "Airplane_Commercial.jpg", "Cookie.jpg")) |
+  (condition == "shoebox" & ! stimulus %in% c("Flower_Sun.jpg", "Airplane_Commercial.jpg", "Oven.jpg"))
+  ]
+
+# also remove white screen, since that confused many participants
+data = data[stimulus != "White_Screen.jpg"]
+
+```
+
+
+
+## Data cleaning round 3: excluding abnormal trial latencies
+
+```{r remove recognition trials where rt is abnormally fast (<400ms) or timed out (2000ms)}
+
+recognition = data[blockcode == "retrieval"]
+
+hist(recognition$latency) # different distributions for random/timeout responses
+mean(recognition$latency) - sd(recognition$latency)
+
+# cutoff values
+cutoff_latency = c(400, 1999)
+
+hist(recognition[latency %between% cutoff_latency]$latency)
+recognition[latency %between% cutoff_latency, .N] # num trials remaining in data
+recognition[!latency %between% cutoff_latency, .N] # num trials excluded from data
+
+data = data[blockcode == "retrieval" & latency %between% cutoff_latency]
+
+```
+
+```{r Save a copy before removing participants based on performance}
+
+data_unclean = copy(data)
+
+```
+
+## Data cleaning round 4: removing participants with dprime below threshold
+
+```{r calculate and visualize dprime (counting missed trials as incorrect)}
+
+# this finds what proportion of times the participant got the right answer in new/old trials
+stats_by_participant = dcast(subset(data, blockcode=="retrieval"),
+                           value.var = "correct",
+                           participant ~ trialcode,
+                           fill=0,
+                           mean, na.rm=T)
+
+# do a bunch of cleaning before dprime
+names(stats_by_participant)[2:3] = c("FA", "HR") # rename to be more descriptive
+stats_by_participant[, FA := 1-FA] # make FA column actually correspond to FA
+stats_by_participant[is.nan(HR),]
+stats_by_participant[FA==0, FA := 1/175][FA==1, FA := 1-(1/175)] # correct 0s and 1s
+stats_by_participant[HR==0, HR := 1/175][HR==1, HR := 1-(1/175)]
+
+stats_by_participant[, dprime := qnorm(HR) - qnorm(FA)] # calculate dprime
+mean(stats_by_participant$dprime) # 1.797581
+
+```
+
+```{r Add hits, false alarms, and dprime by participant to the dataframe}
+
+data = merge(data, stats_by_participant, by="participant")
+
+```
+
+```{r Save a copy before you remove participants}
+
+data_unclean = copy(data)
+
+```
+
+```{r look at bimodal distributions of dprime to figure out cutoff point}
+# the dprime values look bimodal
+hist(stats_by_participant$dprime, breaks = 50)
+
+# use the "modes" package to find the antimode (valley in between 2 distributions)
+cutoff_dprime = amps(stats_by_participant$dprime)$Antimode[2]
+print(cutoff_dprime) # 0.82541
+
+# look at the data above cutoff
+hist(stats_by_participant[dprime > cutoff_dprime]$dprime)
+```
+
+```{r exclude participants with dprime below cutoff}
+
+# these are the participants that we are excluding
+exclude_bimodal_dprime = stats_by_participant[dprime < cutoff_dprime, participant]
+length(stats_by_participant[dprime < cutoff_dprime, participant]) # number of participants being removed
+
+# filter data to eliminate participants
+data <- data[!participant %in% c(exclude_bimodal_dprime)]
+length(unique(data$participant)) # participants remaining
+
+```
+
+## Store the cleaned data just in case
+
+```{r storing clean data}
+
+data_clean = copy(data)
+
+```
+
+
+
+# Calculating memorability (collapsed across orientation conditions)
+
+## Hits, false alarm, dprime, and IES by stimulus
+
+```{r stats by stimulus for all of data}
+
+recognition_by_stimulus = data[blockcode == "retrieval"]
+
+# calculate hits and adjust value if 1 or 0
+hits_by_stimulus = recognition_by_stimulus[trialcode == "old_objects",
+                               .(memory_hits = mean(correct), number_hits = .N), by = stimulus]
+hits_by_stimulus[memory_hits == 0, memory_hits := 1/(2*(number_hits))]
+hits_by_stimulus[memory_hits == 1, memory_hits := 1 - (1/(2*number_hits))]
+
+# calculate fa and adjust value if 1 or 0
+false_alarms_by_stimulus = recognition_by_stimulus[trialcode == "new_objects",
+                                      .(memory_fa = (1-mean(correct)), number_fa = .N), by = stimulus]
+false_alarms_by_stimulus[memory_fa == 0, memory_fa := 1/(2*(number_fa))]
+false_alarms_by_stimulus[memory_fa == 1, memory_fa := 1 - (1/(2*number_fa))]
+
+# calculate dprime
+dprime_by_stimulus = left_join(hits_by_stimulus, false_alarms_by_stimulus)
+dprime_by_stimulus[, dprime := qnorm(memory_hits) - qnorm(memory_fa)]
+
+# find average latency
+rt_by_stimulus = recognition_by_stimulus[, .(rt = mean(latency)), by = stimulus]
+
+# find IES
+
+stats_by_stimulus = left_join(dprime_by_stimulus, rt_by_stimulus)
+stats_by_stimulus[, IES := rt / memory_hits]
+
+```
+
+## Functions for slimming down redundant code
+
+We're still working on something that might streamline this process so we don't have to write the same thing over and over again (while only changing the by=.(something))
+
+Note that this version of calculating IES doesn't acccount for multiplying by correct (discounting incorrect trials in IES calculation) which is what we did prior to this cleaning.
+
+calc_stats
+* uses column names (stimulus, correct, latency) from DT
+* returns memory_hits, memory_fa, dprime, rt, IES
+```{r "calc_stats" returns a table of hits false alarms and dprime by stimulus}
+calc_stats <- function(DT){
+  
+  DT = DT[blockcode == "retrieval"]
+  
+  # find hit rate by stim, adjust value if 1 or 0
+  hits_by_stimulus = DT[trialcode == "old_objects",
+                        .(memory_hits = mean(correct), number_hits = .N), by = stimulus]
+  hits_by_stimulus[memory_hits == 1, memory_hits := (1 - (1/(2*number_hits)))]
+  hits_by_stimulus[memory_hits == 0, memory_hits := 1/(2*number_hits)]
+  
+  # calculate false alarm rate, adjust value if 1 or 0
+  fa_by_stimulus = DT[trialcode == "new_objects", 
+                      .(memory_fa = (1-mean(correct)), number_fa = .N), by = stimulus]
+  fa_by_stimulus[memory_fa == 0, memory_fa := (1/(2*number_fa))]
+  fa_by_stimulus[memory_fa == 1, memory_fa := (1 - (1/(2*number_fa)))] # corrected fa if equal to 0 or 1
+  
+  # calculate dprime
+  dprime_by_stimulus = left_join(hits_by_stimulus, fa_by_stimulus) # putting hit rate and fa rate together
+  dprime_by_stimulus[, dprime := qnorm(memory_hits) - qnorm(memory_fa)] # calculate dprime
+  
+  # calculate rt
+  rt_by_stimulus = DT[, .(rt = mean(latency)), by = stimulus]
+  
+  # find IES
+  stats_by_stimulus = left_join(dprime_by_stimulus, rt_by_stimulus)
+  stats_by_stimulus[, IES := rt / memory_hits]
+  
+  return(stats_by_stimulus)
+}
+```
+
+split_sample_simulations
+* uses calc_stats (uses column names stimulus, correct, latency from DT)
+* returns vector of cor values
+```{r "split_sample_simulations" uses calc_stats to run through simulations}
+split_sample_by_stimulus <- function(DT, num_sims=10, stat="memory_hits"){
+  
+  cor_values = as.vector(matrix(data = NA, ncol = 1, nrow = num_sims))
+  
+  for (i in 1:num_sims){
+    
+    scrambled_participants = sample(unique(DT$participant))
+    half_participants = length(scrambled_participants) / 2
+  
+    grp1 = scrambled_participants[1:half_participants]
+    grp2 = scrambled_participants[(half_participants + 1) : (half_participants*2)]
+    
+    grp1_data = calc_stats(DT[participant %in% grp1])
+    grp2_data = calc_stats(DT[participant %in% grp2])
+    
+    both_grps = left_join(grp1_data, grp2_data, by = "stimulus", suffix = c("_1", "_2"))
+    
+    cor = cor(both_grps[[paste(stat, "_1", sep="")]], 
+              both_grps[[paste(stat, "_2", sep="")]])
+    
+    cor_values[i] = cor
+  }
+  
+  hist(cor_values, main = paste("Histogram of", stat))
+  print(mean(cor_values, na.rm = TRUE))
+  
+  return(cor_values)
+
+}
+
+```
+
+## Using split samples to measure predictability of hits given the stimulus
+
+```{r Split samples for hit rate by stimulus}
+
+SS_hits_by_stimulus = split_sample_by_stimulus(data, num_sims = 1000, stat = "memory_hits") # 0.3018771
+
+```
+
+```{r Split samples for false alarm by stimulus}
+
+SS_fa_by_stimulus = split_sample_by_stimulus(data, num_sims = 1000, stat = "memory_fa") # 0.346721
+
+```
+
+```{r Split samples for dprime by stimulus}
+
+SS_dprime_by_stimulus = split_sample_by_stimulus(data, num_sims = 1000, stat = "dprime") #  0.3250509
+
+```
+
+```{r Split samples for rt by stimulus}
+
+SS_rt_by_stimulus = split_sample_by_stimulus(data, num_sims = 1000, stat = "rt") #0.2171866
+
+```
+
+
+```{r Split samples for IES by stimulus}
+
+SS_IES_by_stimulus = split_sample_by_stimulus(data, num_sims = 1000, stat = "IES") # 0.2974514
+
+```
+
+
+
+## Accounting for participant individuality by subtracting out their average memorability scores
+
+```{r Use corrected data as "correct" in new DT "data_corrected"}
+
+data_corrected = copy(data) # should we just look at old obj?
+
+data_corrected[trialcode == "old_objects", avg_mem := mean(correct), by = .(participant)]
+data_corrected[trialcode == "old_objects", avg_mem := (correct - avg_mem)]
+data_corrected$correct = data_corrected$avg_mem
+
+# would it make sense to do the same for false alarms? what would avg mem be?
+# data_corrected[trialcode == "new_objects, avg_mem := , by = .(participant)]
+
+view(calc_stats(data_corrected))
+
+```
+
+calculate corrected hits by stimulus - corrected for participant average memorability
+```{r Split samples corrected hits by stimulus}
+
+SS_corrected_hits_by_stimulus = split_sample_by_stimulus(data_corrected, num_sims = 100, stat = "memory_hits") #0.320663
+
+```
+
+```{r Split samples using corrected hits for IES by stimulus}
+
+# this gives us a weird answer because memory_hits is really low (e^-3 vs e^-1 is very different)
+SS_corrected_IES_by_stimulus = split_sample_by_stimulus(data_corrected, num_sims = 10, stat = "IES") #-2.44774e-05
+
+```
+
+## Let's fix IES by z-scoring RT (RTZ)
+
+```{r Our previous way of calculating IES}
+
+# data[blockcode == "retrieval", participant_RT := mean(latency) , by= .(participant, correct)]
+# data[blockcode == "retrieval", participant_correct := mean(correct) , by= .(participant)]
+# data[blockcode == "retrieval", IES := participant_RT/ participant_correct]
+# data[, IES:= IES*correct]
+
+# calc_IES <- function(tbl){
+#   tbl[, RTZ := scale(latency), by = .(participant)] #Z score RT within participant
+#   tbl[, PC := mean(correct), by = .(values.stimulus)] #calculate percent correct for each stimulus (i.e. avg hit rate)
+#   tbl[, RTZ_per_stim := mean(RTZ), by= .(values.stimulus)] #calculate average RTZ by stimulus
+#   tbl[, IES_Z := RTZ_per_stim/PC]
+#   
+#   return(tbl)
+# }
+
+```
+
+```{r data with z-scored latency (data_RTZ)}
+
+data_RTZ = copy(data)
+
+data_RTZ[, RTZ := scale(latency), by =.(participant)]
+data_RTZ$latency = data_RTZ$RTZ
+
+```
+
+```{r split sample simulation of IES with z-scored IES, normal hit rate}
+
+SS_IES_RTZ_by_stimulus = split_sample_by_stimulus(data_RTZ, num_sims = 1000, stat = "IES") #0.3261988
+
+```
+
+## What happens if we calculate IES with corrected hits and RTZ?
+
+```{r data with corrected hits and z-scored latency (RTZ)}
+
+data_corrhits_RTZ = copy(data) # can also just alter data_corrected if you previously have it loaded
+
+# correcting the hits
+data_corrhits_RTZ[trialcode == "old_objects", avg_mem := mean(correct), by = .(participant)]
+# adding a constant because otherwise the data gets weird
+data_corrhits_RTZ[trialcode == "old_objects", overall_mem := mean(correct)]
+data_corrhits_RTZ[trialcode == "old_objects", avg_mem := (correct - avg_mem + overall_mem)]
+data_corrhits_RTZ$correct = data_corrhits_RTZ$avg_mem # replace correct bc that's the column that the function takes in!
+
+# z-scoring latency
+data_corrhits_RTZ[, RTZ := scale(latency), by =.(participant)]
+data_corrhits_RTZ$latency = data_corrhits_RTZ$RTZ
+
+```
+
+```{r split sample simulation of IES with z-scored latency and corrected hit rate}
+
+SS_IES_corrhits_RTZ_by_stimulus = split_sample_by_stimulus(data_corrhits_RTZ, num_sims = 1000, stat = "IES") # 0.3252525
+
+# This is still abnormally low; again, it's because we're dividing/multiplying by very small numbers that can be positive or negative (values can be very highly positive or negative)
+
+```
+#
+# Simulations to see how many stimulus presentations we need for robust memorability
+
+Currently: use hit rate as our marker of how participants did
+- later, try dprime, IES?
+- try looking at other stimulus specific markers and predict (ex. RT)
+- sanity check FA?
+
+## With hit rate
+### Functions and cleaning
+
+```{r Function for cleaning data + cleaning}
+
+# removes everyone who had 0 old objects (messes up our simulations)
+rmsubforsim <- function(tbl){
+  
+  summarized_tbl = tbl[blockcode=="retrieval", 
+                      .(num_trials=length(unique(trialnum))), 
+                      by=.(participant, trialcode)]
+  
+  wide_summary = dcast(summarized_tbl, value.var="num_trials", participant~trialcode, fill=0)
+
+  cleaned_tbl = tbl[!participant %in% wide_summary[old_objects<120,]$participant]
+  
+  return(cleaned_tbl)
+}
+
+
+test_data_unclean = rmsubforsim(data_unclean)
+
+
+data_unclean_sim = rmsubforsim(data_unclean)
+data_clean_sim = rmsubforsim(data_clean)
+
+```
+
+```{r Function for simulating (using hit rate)}
+
+run_simulations <- function(tbl, num_participants=100, num_simulations=100){
+  
+  testsim = as.data.frame(matrix(data=NA, ncol=2, nrow=num_participants*num_simulations))
+  names(testsim) = c("num_predicting_participants", "predictability")
+  
+  for(i in c(1:num_participants)){ # number of participants
+    
+    print(paste("number of participants =", i))
+    
+    for(j in c(1:num_simulations)){ # number of simulations per # of participants
+      
+      listsub = sample(unique(tbl$participant)) # randomize list of participants
+      testsub = tbl[participant == listsub[1], ][trialcode == "old_objects"] # take old data for one participant
+      everyone_else = tbl[!participant == listsub[1],][trialcode == "old_objects"][stimulus %in% testsub$stimulus] # have data for the stimuli testsub saw, without testsub
+      
+      predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+          sample_n(i, replace = TRUE) %>% # sample each stimulus i times with replacement
+          summarize(HR = mean(correct)) # find the hit rate for each stimulus
+      
+      mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+      model = glm(correct ~ HR.y, family = binomial, mergesub) # this is the glm!
+      
+      # store the data
+      index = (num_simulations * (i-1)) + j
+      testsim[index, 1] = i # store the num participants used to predict
+      testsim[index, 2] = model$coefficients[2] # store b1 value for this sim
+    }
+  }
+  return(testsim)
+}
+
+```
+
+```{r Function for drawing plots, called by simulating function}
+
+drawsimplot <- function(tbl){
+  tbl %>%
+    ggplot(aes(num_predicting_participants, predictability)) +
+    # geom_jitter(alpha=0.2) +
+    stat_summary(fun.y = mean, geom = "point", size = 3, color = "black") +
+    stat_summary(fun.data = mean_se, geom = "errorbar", width = 0, size = 1.5, color = "black") +
+    theme_classic() +
+    geom_smooth(method="auto") +
+    ylim(-1, 3) +
+    xlim(0,40)
+
+}
+
+```
+
+### Run simulations
+
+```{r Before cleaning, full dataset}
+
+sim_unclean_full = run_simulations(data_unclean_sim) # run the simulation
+plt_unclean_full = drawsimplot(sim_unclean_full) # draw the plot
+
+# add extra information to the plot
+avgsub_unclean_full = mean(data_unclean_sim[, .(avgsub = length(unique(participant))),
+                                                  by=.(stimulus)]$avgsub)
+plt_unclean_full + 
+  labs(title = "Unclean dataset, all data",
+       subtitle = paste("sub per stim =", avgsub_unclean_full)) +
+  geom_vline(xintercept = avgsub_unclean_full, col="red")
+
+
+plt_unclean_full # take a look!
+
+```
+
+```{r Before cleaning, extra dataset}
+
+sim_unclean_extra = run_simulations(data_unclean_sim[batch==5 & condition=="outdoor",])
+plt_unclean_extra = drawsimplot(sim_unclean_extra)
+
+avgsub_unclean_extra = mean(data_unclean_sim[batch==5 & condition=="outdoor",
+                                            .(avgsub = length(unique(participant))),
+                                            by=.(stimulus)]$avgsub)
+plt_unclean_extra +
+  labs(title = "Uncleaned dataset, extra batch only",
+       subtitle = paste("sub per stim =", avgsub_unclean_extra)) +
+  geom_vline(xintercept = avgsub_unclean_extra, col = "red")
+
+plt_unclean_extra
+
+```
+
+
+```{r After cleaning, full dataset}
+
+sim_clean_full = run_simulations(data_clean_sim)
+plt_clean_full = drawsimplot(sim_clean_full)
+
+avgsub_clean_full = mean(data_clean_sim[, .(avgsub = length(unique(participant))),
+                                       by=.(stimulus)]$avgsub)
+plt_clean_full + 
+  labs(title = "Clean dataset, all data",
+       subtitle = paste("sub per stim =", avgsub_clean_full)) +
+  geom_vline(xintercept = avgsub_clean_full, col="red")
+
+plt_clean_full
+
+```
+
+```{r After cleaning, extra dataset}
+
+sim_clean_extra = run_simulations(data_clean_sim[batch==5 & condition=="outdoor",])
+plt_clean_extra = drawsimplot(sim_clean_extra)
+
+avgsub_clean_extra = mean(data_clean_sim[batch==5 & condition=="outdoor",
+                                          .(avgsub = length(unique(participant))),
+                                          by=.(stimulus)]$avgsub)
+plt_clean_extra +
+  labs(title = "Cleaned dataset, extra batch only") +
+  #labs(subtitle = paste("sub per stim =", avgsub_clean_extra)) +
+  geom_vline(xintercept = avgsub_clean_extra, col = "red") + 
+  xlim=c(0, 40)
+
+plt_clean_extra
+
+```
+
+
+```{r Organize the plots}
+
+ggpubr::ggarrange(plt_unclean_full, plt_unclean_extra, plt_clean_full, plt_clean_extra,
+                  ncol=2, nrow=2)
+
+
+```
+
+
+### Run models on participants who are doing poorly
+
+What we want to do
+- bin folks with poor memory (ex. dprime between 0.2-0.4, 0.4-0.6, etc)
+- use those folks as the test participants
+- use folks with better dprime (ex. above the cutoff, which is currently about 0.8) as the predictors
+- see how correlated the people with poor memory are to the ppl with high memory?
+
+Note:
+- if we're using our measure of predictability as hit rate by stimulus, and people generally have low dprime if their hit rates are uninformative, then what would this be picking up?
+
+```{r participants with poor dprime}
+
+# this function assumes that the dprime by participant is stored in the dataframe
+tbl = copy(data_unclean)
+min = -10
+max = 5
+i = 36
+
+pred_lowdprime <- function(tbl, min, max){
+  
+  tbl = tbl[trialcode == "old_objects",]
+  
+  low_tbl = tbl[dprime %between% c(min, max),]
+  pred_tbl = tbl[, .(HR=mean(correct)), by=stimulus]
+  pred_tbl[HR == 1, HR := 1 - (1/175)] # correct the hit rate
+  pred_tbl[HR == 0, HR := 1/175]
+  
+  # make a list of people to iterate through
+  low_subs = low_tbl[, .(HR_sub = mean(correct), pred = 0), by=.(participant, dprime)]
+  lst_subs = unique(low_subs$participant)
+  
+  for(i in lst_subs){
+    
+    testsub = low_tbl[participant == i,]
+    predsub = pred_tbl[stimulus %in% testsub$stimulus,]
+    
+    mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+    model = glm(correct ~ HR.y, family = binomial, mergesub) # this is the glm!
+    
+    low_subs[participant == i]$pred = model$coefficients[2]
+    
+  }
+  return(low_subs)
+}
+
+```
+
+```{r Run it on participants dprime between 0.2-0.4}
+
+dprime_low = pred_lowdprime(data_unclean_sim, min=-10, max=10)
+
+dprime_low %>%
+  ggplot(aes(HR_sub, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-15, 15)
+
+plot(dprime_low$dprime,dprime_low$HR_sub)
+```
+
+```{r Dprime between 0.4-0.6}
+
+dprime_04_06 = pred_lowdprime(data_unclean, min=0.4, max=0.6)
+
+dprime_04_06 %>%
+  ggplot(aes(dprime, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-100, 100)
+
+dprime_02_08 = pred_lowdprime(data_unclean, min=0.2, max=0.8)
+
+dprime_02_08 %>%
+  ggplot(aes(dprime, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-15, 15)
+
+
+dprime_all = pred_lowdprime(data_unclean, min=0, max=5)
+
+dprime_all %>%
+  ggplot(aes(dprime, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-15, 15)
+
+mean(dprime_all[pred %between% c(-100, 100) & dprime < 0.8,]$pred) #4.49396
+
+dprime_00_06 = pred_lowdprime(data_unclean, min=0, max=0.6)
+
+dprime_00_06 %>%
+  ggplot(aes(dprime, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-15, 15)
+
+dprime_00_08 = pred_lowdprime(data_unclean, min=0, max=0.8)
+
+dprime_00_08 %>%
+  ggplot(aes(dprime, pred)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ylim(-15, 15)
+
+mean(dprime_00_08[pred %between% c(-100, 100),]$pred) #5.351742
+
+dprime_all_threshold = pred_lowdprime(data_unclean, min=0, max=5)
+
+mean(dprime_all_threshold[pred %between% c(-100, 100) & dprime < 0.8, ]$pred) #4.49396
+
+```
+
+
+HR_low / HR_high; by stimulus
+should be below 1 bc lower has lower HR
+
+sanity checks wrt why certain stim might be more memorable
+- orientation qs?
+
+is poor memory in one orientation q?
+- better predictiveness within orientation q?
+
+double check why beta values are so different between sim + pred
+
+nameability
+-
+# orientation question memorability
+
+## orientation question sanity checks
+```{r orientation question sanity checks}
+
+mean(data_unclean[condition == "shoebox",]$dprime) #1.92092
+mean(data_unclean[condition == "manmade",]$dprime) #1.885797
+mean(data_unclean[condition == "outdoor",]$dprime) #1.89243
+mean(data_unclean[condition == "emotional",]$dprime) #2.129488
+
+HR_ratio <- function(tbl, criteria){
+  
+  tbl = tbl[trialcode == "old_objects",]
+  
+  low_tbl = tbl[dprime < criteria, .(low_N = .N, HR_low=mean(correct)), by=.(stimulus)]
+  high_tbl = tbl[dprime > criteria, .(high_N = .N, HR_high=mean(correct)), by=.(stimulus)]
+  summary_tbl = tbl[, .(HR_all=mean(correct)), by=.(stimulus)]
+  
+  merge_tbl = merge(low_tbl, high_tbl, by=c("stimulus"))
+  merge_tbl = merge(merge_tbl, summary_tbl, by=c("stimulus"))
+  merge_tbl[, ratio := HR_low / HR_high]
+  
+}
+
+test = HR_ratio(data_unclean_sim, .8)
+
+test_subset = test[HR_all > 0.7]
+
+plot(test_subset$HR_high,test_subset$HR_low)
+cor(test_subset$HR_high,test_subset$HR_low)
+
+mean = test[is.finite(ratio)==TRUE, .(mean_ratio = mean(ratio, na.rm=TRUE), mean_low_N= mean(low_N), mean_high_N = mean(high_N)), by = "condition"]
+
+```
+
+
+```{r distribution of orientation question amongst poor dprime}
+
+low_dprime = data_unclean[dprime < cutoff_dprime]
+low_dprime[, length(unique(participant)), by = "condition"] #there are relatively few low dprime participants in manmade (even though it has similar total participants to the other 3 conditions)
+
+data_unclean[, length(unique(participant)), by = "condition"] 
+
+#create different memory scores per orientation question
+
+
+
+```
+
+
+##simulations by orientation question
+```{r simulations by orientation question}
+
+manmade_simulation = run_simulations(data_unclean_sim[condition == "manmade"], num_participants = 30, num_simulations = 30)
+outdoor_simulation = run_simulations(data_unclean_sim[condition == "outdoor"], num_participants = 30, num_simulations = 30)
+shoebox_simulation = run_simulations(data_unclean_sim[condition == "shoebox"], num_participants = 30, num_simulations = 30)
+emotional_simulation = run_simulations(data_unclean_sim[condition == "emotional"], num_participants = 30, num_simulations = 30)
+
+plt_manmade = drawsimplot(manmade_simulation) + labs(title = "manmade") +geom_hline(yintercept =1)
+plt_outdoor = drawsimplot(outdoor_simulation) + labs(title = "outdoor") +geom_hline(yintercept =1)
+plt_shoebox = drawsimplot(shoebox_simulation) + labs(title = "shoebox") +geom_hline(yintercept =1)
+plt_emotional = drawsimplot(emotional_simulation) + labs(title = "emotional") +geom_hline(yintercept =1)
+
+ggpubr::ggarrange(plt_manmade, plt_outdoor, plt_shoebox, plt_emotional,
+                  ncol=2, nrow=2)
+
+```
+
+
+## likelihood of a stimulus being remembered based on participant dprime
+```{r likelihood of a stimulus being remembered based on participant dprime}
+
+stimulus1= data_unclean_sim[, .(pred=0), by = stimulus]
+
+for (i in 1:nrow(stimulus1)) {
+  print(stimulus1[i,1])
+  data = data_unclean_sim[stimulus == stimulus1[[i,1]]]
+  model = glm(correct ~ dprime, family = binomial, data)
+
+  stimulus1[i,2]=model$coefficients[2]
+}
+return(stimulus1)
+
+ggplot(stimulus1, aes(stimulus,pred)) +
+  geom_point()+
+  geom_smooth()
+
+mean(stimulus1$pred)
+
+```
+
+## split sample validation
+```{r}
+
+splitsampleorientation <- function(tbl, orientation, num_sim = 100, all=F){
+  
+  testsim = as.data.frame(matrix(data=NA, ncol=1, nrow=num_sim))
+  names(testsim) = c(orientation)
+  
+  if(all==F){tbl_condition = tbl[condition == orientation]}
+  else if(all==T){tbl_condition = copy(tbl)}
+  
+  for(i in 1:num_sim){
+    listsub = sample(unique(tbl_condition$participant))
+    half = as.integer(length(listsub) / 2)
+    
+    half1 = tbl_condition[participant %in% listsub[1:half],]
+    half2 = tbl_condition[participant %in% listsub[(half+1):length(listsub)],]
+    
+    summary1 = half1[, .(HR1 = mean(correct)), by=stimulus]
+    summary2 = half2[, .(HR2 = mean(correct)), by=stimulus]
+    
+    mergetbl = merge(summary1, summary2, by="stimulus")
+    model = lm(mergetbl$HR1, mergetbl$HR2)
+    
+    testsim[i, 1] = model$coefficients[2]
+  }
+  
+  return(testsim)
+}
+
+shoebox_split = splitsampleorientation(data_unclean, orientation="shoebox")
+emotional_split = splitsampleorientation(data_unclean, orientation= "emotional")
+manmade_split = splitsampleorientation(data_unclean, orientation="manmade")
+outdoor_split = splitsampleorientation(data_unclean, orientation="outdoor")
+
+all_split = splitsampleorientation(data_unclean, orientation= "all", all=T)
+
+split_tbl = cbind(shoebox_split, emotional_split, manmade_split, outdoor_split)
+split_tbl = cbind(split_tbl, all_split)
+
+boxplot(split_tbl)
+
+```
+
+```{r leave one out method for orientation q}
+
+bootstrapping_orientation <- function(tbl, orientation, num_sim = 100, all=F){
+  
+  testsim = as.data.frame(matrix(data=NA, ncol=1, nrow=num_sim))
+  names(testsim) = c(orientation)
+  
+  if(all==F){tbl_condition = tbl[condition == orientation]}
+  else if(all==T){tbl_condition = copy(tbl)}
+  
+  for(i in 1:num_sim){
+    listsub = sample(unique(tbl_condition$participant))
+    
+    oneout = tbl_condition[participant == listsub[1],]
+    everyone_else = tbl_condition[participant != listsub[1],][stimulus %in% oneout$stimulus]
+    
+    predsub = everyone_else[, .(HRpred = mean(correct)), by=stimulus]
+
+    mergetbl = merge(oneout, predsub, by="stimulus")
+    model = glm(correct ~ HRpred, family = "binomial", data=mergetbl)
+    
+    testsim[i, 1] = model$coefficients[2]
+  }
+  
+  return(testsim)
+}
+
+shoebox_boot = bootstrapping_orientation(data_unclean, orientation="shoebox")
+emotional_boot = bootstrapping_orientation(data_unclean, orientation= "emotional")
+manmade_boot = bootstrapping_orientation(data_unclean, orientation="manmade")
+outdoor_boot = bootstrapping_orientation(data_unclean, orientation="outdoor")
+
+all_boot = bootstrapping_orientation(data_unclean, orientation= "all", all=T)
+
+boot_tbl = cbind(shoebox_boot, emotional_boot, manmade_boot, outdoor_boot)
+boot_tbl = cbind(boot_tbl, all_boot)
+
+gathered_boot = gather(boot_tbl)
+
+ggplot(gathered_boot, aes(x=key, y=value)) +
+  geom_point(position="jitter", aes(colour=key)) +
+  stat_summary(fun.y = mean, geom = "point", size=3, color = "black") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0, size = 1.5, color = "black") +
+  ylim(-20,20) +
+  geom_line(aes(x=key, y=mean(value), colour=key)) +
+  geom_hline(yintercept = mean(all_boot$all))
+
+
+mean(shoebox_boot$shoebox)
+mean(all_boot$all)
+
+```
+
+
+
+
+
+# NOT CLEANED CODE AFTER THIS POINT
+
+
+
+## Creating simulated participants sampled from stimulus distributions
+
+```{r Create simulated data by which to sample}
+
+data[, sd_HR := sqrt((avg_mem*(1-avg_mem))/number_presentations)] #finding the sd for a Bernouilli distribution (for binary choice task)
+
+distribution_df = data[, .(meanHR = mean(correct), mean_sd_HR = mean(sd_HR, na.rm=TRUE)), by=values.stimulus] 
+
+distribution_df[] #new data table with the values needed for selecting values from a distribution for each stimuli
+
+data[, mean_sd_HR := mean(sd_HR, na.rm=TRUE), by=values.stimulus] 
+
+simulated_GuineaPig = rnorm(40, mean=distribution_df[[1,2]], sd=distribution_df[[1,3]])
+
+distribution_df[, sim_avg_HR := mean(rnorm(3, mean = meanHR, sd = mean_sd_HR)), by = .(values.stimulus)]
+
+mean(simulated_GuineaPig)
+
+```
+
+```{r Run simulation with simulated data?}
+
+# this is predicting $correct by the average HR of the predicting participants
+
+testsim = data.frame()
+
+num_participants = 80 # minimum number that a stimulus was seen 
+num_simulations = 30
+tbl = data
+testsim = as.data.frame(matrix(data=NA, ncol=2, nrow=num_participants*num_simulations))
+names(testsim) = c("num_predicting_participants", "predictability")
+
+for(i in c(1:num_participants)){
+  for(j in c(1:num_simulations)){
+    listsub = sample(unique(tbl$participant)) # randomize list of participants
+    testsub = tbl[participant == listsub[1], ][trialcode == "old_objects"] # take old data for one participant
+    everyone_else = tbl[!participant == listsub[1],][trialcode == "old_objects"][values.stimulus %in% testsub$values.stimulus] # have data for the stimuli testsub saw, without testsub
+    
+    # this is using HR and the bernoulli calculation for sd
+    # simulated_subjects = everyone_else[, .(meanHR = mean(correct), meanSD = mean(sd_HR, na.rm=TRUE)), by=values.stimulus] # this is using HR and the bernoulli sd of HR
+    
+    # this is using corrected_hits and sd of corrected_hits
+    everyone_else[, participantHR := mean(correct), by=participant] #find participant's HR 
+    everyone_else[, corrected_hits := correct-participantHR] # correct for participant's average HR
+    simulated_subjects = everyone_else[, .(meanHR=mean(corrected_hits), meanSD=mean(sd(corrected_hits))), by=values.stimulus] # this is using corrected_hits and sd of corrected hits
+    
+    simulated_subjects[, sim_avg_HR := mean(rnorm(i, mean = meanHR, sd = meanSD)), by = .(values.stimulus)]
+    
+    mergesub = merge(testsub, simulated_subjects, by="values.stimulus") # this will be stored in "V1"
+    model = glm(correct ~ sim_avg_HR, family = binomial, mergesub) # this is the glm!
+    
+    # store the data
+    index = (num_simulations * (i-1)) + j
+    testsim[index, 1] = i # store the num participants used to predict
+    testsim[index, 2] = model$coefficients[2] # store b1 value for this sim
+  }
+}
+
+testsim = as.data.table(testsim)[predictability %between% c(-10, 10)]
+
+# graph the output!
+testsim %>%
+  ggplot(aes(num_predicting_participants, predictability)) +
+  geom_jitter(alpha=0.2) +
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0, size = 1.5, color = "black") +
+  theme_classic() +
+  geom_smooth(method="loess")
+
+
+graph_sim = data.table()
+graph_sim = as.data.table(testsim)[, .(avg_predictability = mean(predictability)) , by= .(num_predicting_participants)]
+
+graph_sim %>% ggplot(aes(num_predicting_participants, avg_predictability)) +
+  geom_jitter() +
+  geom_smooth()
+
+# record RT, IES --> other stimulus-specific stuff (not d)
+# check FA?
+
+
+```
+
+## Check out the data from the extra participants
+This should be outdoors batch 5!!!
+
+```{r Run simulations with replacement with the extra batch}
+# is this any different from the data we get from our simulations?
+# AKA are we getting any more predictive power from this?
+
+testsim = data.frame()
+
+num_participants = 100 # minimum number that a stimulus was seen 
+num_simulations = 100
+
+tbl = data[batch==5 & condition=="outdoor",]
+testsim = as.data.frame(matrix(data=NA, ncol=2, nrow=num_participants*num_simulations))
+names(testsim) = c("num_predicting_participants", "predictability")
+
+for(i in c(1:num_participants)){
+  for(j in c(1:num_simulations)){
+    listsub = sample(unique(tbl$participant)) # randomize list of participants
+    testsub = tbl[participant == listsub[1], ][trialcode == "old_objects"] # take old data for one participant
+    everyone_else = tbl[!participant == listsub[1],][trialcode == "old_objects"][stimulus %in% testsub$stimulus] # have data for the stimuli testsub saw, without testsub
+    
+    predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+        sample_n(i, replace = TRUE) %>% # sample each stimulus i times with replacement
+        summarize(HR = mean(correct)) # find the hit rate for each stimulus
+    
+    mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+    model = glm(correct ~ HR, family = binomial, mergesub) # this is the glm!
+    
+    # store the data
+    index = (num_simulations * (i-1)) + j
+    testsim[index, 1] = i # store the num participants used to predict
+    testsim[index, 2] = model$coefficients[2] # store b1 value for this sim
+  }
+}
+
+
+
+```
+
+```{r Graph the output}
+
+
+# graph the output!
+testsim %>%
+  ggplot(aes(num_predicting_participants, predictability)) +
+  # geom_jitter(alpha=0.2) +
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0, size = 1.5, color = "black") +
+  theme_classic() +
+  geom_smooth(method="auto") +
+  xlim(0, 50) +
+  ylim(-5, 5)
+
+
+graph_sim = data.table()
+graph_sim = as.data.table(testsim)[, .(avg_predictability = mean(predictability)) , by= .(num_predicting_participants)]
+
+graph_sim %>% ggplot(aes(num_predicting_participants, avg_predictability)) +
+  geom_jitter() +
+  geom_smooth()
+
+```
+
+
+
+
+# Variation in memorability between conditions and batches
+
+```{r Find stats by batch and condition}
+
+recognition_by_batch = data[blockcode == "retrieval"]
+
+# calculate hits and adjust value if 1 or 0
+hits_by_batch = recognition[trialcode == "old_objects",
+                               .(memory_hits = mean(correct), number_hits = .N), by = .(stimulus, condition, batch)]
+hits_by_batch[memory_hits == 0, memory_hits := 1/(2*(number_hits))]
+hits_by_batch[memory_hits == 1, memory_hits := 1 - (1/(2*number_hits))]
+
+# calculate fa and adjust value if 1 or 0
+false_alarms_by_batch = recognition[trialcode == "old_objects",
+                                       .(memory_fa = (1-mean(correct)), number_fa = .N), by = .(stimulus, condition, batch)]
+false_alarms_by_batch[memory_fa == 0, memory_fa := 1/(2*(number_fa))]
+false_alarms_by_batch[memory_fa == 1, memory_fa := 1 - (1/(2*number_fa))]
+
+# calculate dprime
+dprime_by_batch = left_join(hits_by_batch, false_alarms_by_batch)
+dprime_by_batch[, dprime := qnorm(memory_hits) - qnorm(memory_fa)]
+
+# find average latency
+rt_by_batch = recognition[, .(rt = mean(latency)), by = .(stimulus, condition, batch)]
+
+# find IES
+stats_by_batch = left_join(dprime_by_batch, rt_by_batch)
+stats_by_batch[, IES := rt / memory_hits]
+
+
+```
+
+```{r Plot hit rate by batch and condition}
+
+#emotional
+emotional_hist <- stats_by_batch[condition == "emotional", ] %>%
+  ggplot(aes(x=memory_hits)) + 
+  geom_histogram(color="black", fill="white", bins=10) + 
+  facet_grid(batch ~ .) +
+  coord_cartesian(xlim=c(0,1)) +
+  ggtitle("Emotional hits by batch") +
+  geom_vline(aes(xintercept=mean(memory_hits), color = "red"), linetype="dashed")
+
+shoebox_hist <- stats_by_batch[condition == "shoebox", ] %>%
+  ggplot(aes(x=memory_hits)) + 
+  geom_histogram(color="black", fill="white", bins=10) + 
+  facet_grid(batch ~ .) +
+  coord_cartesian(xlim=c(0,1)) +
+  ggtitle("Shoebox hits by batch") +
+  geom_vline(aes(xintercept=mean(memory_hits), color = "red"), linetype="dashed")
+
+outdoor_hist <- stats_by_batch[condition == "outdoor", ] %>%
+  ggplot(aes(x=memory_hits)) + 
+  geom_histogram(color="black", fill="white", bins=10) + 
+  facet_grid(batch ~ .) +
+  coord_cartesian(xlim=c(0,1)) +
+  ggtitle("Outdoor hits by batch") +
+  geom_vline(aes(xintercept=mean(memory_hits), color = "red"), linetype="dashed")
+
+manmade_hist <- stats_by_batch[condition == "manmade", ] %>%
+  ggplot(aes(x=memory_hits)) + 
+  geom_histogram(color="black", fill="white", bins=10) + 
+  facet_grid(batch ~ .) +
+  coord_cartesian(xlim=c(0,1)) +
+  ggtitle("Manmade hits by batch") +
+  geom_vline(aes(xintercept=mean(memory_hits), color = "red"), linetype="dashed")
+
+```
+
+```{r Find participants' hit rate by condition}
+
+hits_by_condition = recognition[trialcode == "old_objects",
+                               .(memory_hits = mean(correct), number_hits = .N), by = .(participant, condition)]
+hits_by_condition[memory_hits == 0, memory_hits := 1/(2*(number_hits))]
+hits_by_condition[memory_hits == 1, memory_hits := 1 - (1/(2*number_hits))]
+
+```
+
+```{r Plot participants' hit rate by condition}
+
+hits_by_condition %>%
+  ggplot(aes(x=memory_hits)) +
+  geom_histogram(color="black", fill="white") +
+  geom_vline(aes(xintercept=mean(memory_hits), color="red"), linetype="dashed") +
+  facet_grid(condition ~ .) 
+
+```
+
+
+

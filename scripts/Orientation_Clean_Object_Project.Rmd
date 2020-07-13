@@ -1,0 +1,368 @@
+---
+title: "Orientation_Clean_Object_Project"
+author: "Sarah"
+date: "11/06/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load in Data
+
+```{r load packages}
+
+rm(list = ls()) #run this line to clear your environment
+library(lme4); library(lmerTest); library(tidyverse); library(data.table); library(dtplyr); library(BBmisc)
+
+data_dir = "/Users/sarahberger/Desktop/ObjectProject/datafiles/"
+
+```
+
+```{r load data and save CSV filename to a new column}
+relevantData = list.files(path = data_dir, full.names = TRUE)
+
+data = data.table()
+for (i in relevantData) {
+  df_temp = tbl_dt(read.csv(i))
+  df_temp[, filename := i]
+  data = rbind(data, df_temp)
+}
+
+data = tbl_dt(data)
+
+```
+
+```{r new columns to denote condition and batch}
+
+data$group = NULL #remove group col
+
+#identify batches 
+data[grep(pattern = "batch_1.csv", x = filename, ), batch := 1 ]
+data[grep(pattern = "batch_2.csv", x = filename, ), batch := 2 ]
+data[grep(pattern = "batch_3.csv", x = filename, ), batch := 3 ]
+data[grep(pattern = "batch_4.csv", x = filename, ), batch := 4 ]
+data[grep(pattern = "batch_5.csv", x = filename, ), batch := 5 ]
+data[grep(pattern = "batch_6.csv", x = filename, ), batch := 6 ]
+data[grep(pattern = "batch_7.csv", x = filename, ), batch := 7 ]
+data[grep(pattern = "batch_8.csv", x = filename, ), batch := 8 ]
+data[grep(pattern = "batch_9.csv", x = filename, ), batch := 9 ]
+data[grep(pattern = "batch_10.csv", x = filename, ), batch := 10 ]
+
+
+#identify conditions
+data[grep(pattern = "emotional", x = filename, ), condition := "emotional" ]
+data[grep(pattern = "shoebox", x = filename, ), condition := "shoebox" ]
+data[grep(pattern = "memory", x = filename, ), condition := "humanmade" ]
+data[grep(pattern = "outdoors", x = filename, ), condition := "outdoors" ]
+
+```
+
+```{r create new participant IDs and arrange by participant}
+
+to_assign_ids = data[, .N, keyby = .(subject, condition, batch)] 
+to_assign_ids[, participant := 1:.N] #add new participant column
+to_assign_ids$N = NULL
+
+data = left_join(data, to_assign_ids)
+
+```
+
+```{r arrange and rename variables for convenience, saving full data prior to excluding}
+
+data = data %>% arrange(participant) %>% select(participant, everything()) # arrange by participant
+
+names(data)[8] = "stimulus" # renaming for convenience
+
+# remove unnecessary columns
+data$subject = NULL
+data$filename = NULL
+
+data_full = copy(data)
+
+```
+
+# Clean Data
+
+## Data cleaning round 1: remove abnormal trial latencies
+```{r remove encoding trials where rt is abnormally fast (<400ms) or timed out (2000ms)}
+
+encoding = data[blockcode == "encoding"]
+encoding$correct = NULL
+
+# cutoff latency at 2s if manmade, outdoors, or shoebox, 3s if emotional
+encoding = encoding[condition %in% c("humanmade", "outdoors", "shoebox") & latency %between% c(400, 1999) |
+                      condition == "emotional" & latency %between% c(400, 2999)]
+
+```
+
+## Data cleaning round 2: remove quit responses
+```{r remove Ctrl+Q, Ctrl+B}
+
+encoding = encoding[!response %in% c("Ctrl+'Q'", "Ctrl+'B'")]
+
+```
+
+## Save copies of everything
+```{r Save a clean copy of encoding}
+
+encoding_clean = copy(encoding)
+
+```
+
+# Analysis 1: Find particpants who are poorly correlated with the average response
+
+## 1.1 run a glm to predict a participants response to the orientation question with the average response
+
+```{r shoebox, outdoors, human-made}
+#for each individual participant, correlate their response with the average value of the response
+#get their their average correlation for every stimulus (if its super low, remove them)
+
+encoding[, response_num := 0][response == "37", response_num := 1]
+encoding_sim = encoding[condition != "emotional"]
+
+participant_list = unique(encoding_sim$participant)
+
+orientationmodel = as.data.frame(matrix(data=NA, ncol=2, nrow=length(participant_list)))
+names(orientationmodel) = c("participant", "predictability")
+
+for (i in 1:length(participant_list)) {
+  testsub = encoding_sim[participant == participant_list[i] ]
+  everyone_else = encoding_sim[participant != participant_list[i],][stimulus %in% testsub$stimulus][condition %in% testsub$condition] # have data for the stimuli testsub saw, without testsub
+      
+      predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+          summarize(avg_response = mean(response_num)) # find the hit rate for each stimulus
+      
+      mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+      model = glm(response_num ~ avg_response, family = binomial, mergesub) # this is the glm!
+      
+      orientationmodel[i, 1] = participant_list[i] # store the num participants used to predict
+      orientationmodel[i, 2] = model$coefficients[2] # store b1 value for this sim
+}
+
+  orientationmodel
+
+  hist(orientationmodel$predictability, breaks = 50)
+  
+  mean(orientationmodel$predictability, na.rm=T)
+```
+
+
+```{r emotional}
+
+encoding_emotional = encoding[condition == "emotional"]
+encoding_emotional[response==1, response_num := 1]
+encoding_emotional[response==2, response_num := 2]
+encoding_emotional[response==3, response_num := 3]
+encoding_emotional[response==4, response_num := 4]
+encoding_emotional[response==5, response_num := 5]
+encoding_emotional[response==6, response_num := 6]
+encoding_emotional[response==7, response_num := 7]
+encoding_emotional[, response_z := normalize(response_num, method = "standardize", range = c(0, 1), margin = 1L, on.constant = "quiet"), by=participant]
+
+participant_list = unique(encoding_emotional$participant)
+
+emo_orientationmodel = as.data.frame(matrix(data=NA, ncol=2, nrow=length(participant_list)))
+names(emo_orientationmodel) = c("participant", "predictability")
+
+for (i in 1:length(participant_list)) {
+  testsub = encoding_emotional[participant == participant_list[i] ]
+  everyone_else = encoding_emotional[participant != participant_list[i],][stimulus %in% testsub$stimulus] # have data for the stimuli testsub saw, without testsub
+      
+      predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+          summarize(avg_response = mean(response_z)) # find the hit rate for each stimulus
+      
+      mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+      model = lm(response_z ~ avg_response, mergesub) # this is the glm!
+      
+      emo_orientationmodel[i, 1] = participant_list[i] # store the num participants used to predict
+      emo_orientationmodel[i, 2] = model$coefficients[2] # store b1 value for this sim
+}
+
+  emo_orientationmodel
+  mean(emo_orientationmodel$predictability, na.rm=T)
+```
+
+## 1.2 remove participants with negative beta values
+
+```{r remove people with negative betas}
+
+orientationmodel = tbl_dt(orientationmodel)
+emo_orientationmodel = tbl_dt(emo_orientationmodel)
+
+toremove = orientationmodel[predictability <= 0]$participant
+encoding_remove = encoding[!participant  %in% c(toremove)]
+
+emoremove = emo_orientationmodel[predictability <= 0]$participant
+encoding_remove = encoding_remove[!participant  %in% c(emoremove)]
+
+```
+
+
+## 1.3 See if beta values increase after removing people with negative beta values
+
+```{r shoebox, outdoors, humanmade}
+
+encoding_sim = encoding_remove[condition != "emotional"]
+
+participant_list = unique(encoding_sim$participant)
+
+rm_orientationmodel = as.data.frame(matrix(data=NA, ncol=2, nrow=length(participant_list)))
+names(rm_orientationmodel) = c("participant", "predictability")
+
+for (i in 1:length(participant_list)) {
+  testsub = encoding_sim[participant == participant_list[i] ]
+  everyone_else = encoding_sim[participant != participant_list[i],][stimulus %in% testsub$stimulus][condition %in% testsub$condition] # have data for the stimuli testsub saw, without testsub
+      
+      predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+          summarize(avg_response = mean(response_num)) # find the hit rate for each stimulus
+      
+      mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+      model = glm(response_num ~ avg_response, family = binomial, mergesub) # this is the glm!
+      
+      rm_orientationmodel[i, 1] = participant_list[i] # store the num participants used to predict
+      rm_orientationmodel[i, 2] = model$coefficients[2] # store b1 value for this sim
+}
+
+  rm_orientationmodel
+  
+  mean(rm_orientationmodel$predictability, na.rm=T) #mean predicatability goes up
+  
+```  
+
+
+```{r emotional}
+rm_encoding_emotional = encoding_emotional[!participant  %in% c(emoremove)]
+  
+participant_list = unique(rm_encoding_emotional$participant)
+
+rm_emo_orientationmodel = as.data.frame(matrix(data=NA, ncol=2, nrow=length(participant_list)))
+names(rm_emo_orientationmodel) = c("participant", "predictability")
+
+for (i in 1:length(participant_list)) {
+  testsub = rm_encoding_emotional[participant == participant_list[i] ]
+  everyone_else = rm_encoding_emotional[participant != participant_list[i],][stimulus %in% testsub$stimulus] # have data for the stimuli testsub saw, without testsub
+      
+      predsub = group_by(everyone_else, stimulus) %>% # following calc should be by stimulus
+          summarize(avg_response = mean(response_z)) # find the hit rate for each stimulus
+      
+      mergesub = merge(testsub, predsub, by="stimulus") # this will be stored in "V1"
+      model = lm(response_z ~ avg_response, mergesub) # this is the glm!
+      
+      rm_emo_orientationmodel[i, 1] = participant_list[i] # store the num participants used to predict
+      rm_emo_orientationmodel[i, 2] = model$coefficients[2] # store b1 value for this sim
+}
+
+  rm_emo_orientationmodel
+  
+  mean(rm_emo_orientationmodel$predictability, na.rm=T) #mean predictability goes up
+```
+
+# Analysis 2: Look at relative frequencies of responses
+
+## 2.1 Shoebox, outdoors, human-made
+
+```{r Function for 3 of the encoding questions}
+
+encoding_stats = function(DT, type){
+
+  # create a table
+  tbl = DT[condition == type]
+  tbl[, response_num := 0][response == "37", response_num := 1]
+  tbl[, sd := sd(response_num), by=stimulus]
+  
+  # calculate the frequency that the response happened, then divide by the total number of instances
+  tbl = tbl[, .N, by = .(stimulus, sd, response_num)]
+  tbl[, num_instances := sum(N), by=stimulus]
+  # only calculate a score if they give a response (ex. humanmade score only if there was a humanmade response)
+  tbl[, score := 0][response_num == 1, score := N / num_instances, by=stimulus]
+  
+  # get one score per item
+  tbl = arrange(tbl, desc(score))
+  tbl = tbl[, .SD[1], by = stimulus]
+  
+  tbl = subset(tbl, select = c("stimulus", "score", "sd"))
+  
+  # return the table
+  return(tbl)
+}
+
+```
+
+
+```{r find score and sd of responses for humanmade, shoebox, and outdoors}
+
+humanmade = encoding_stats(encoding, "humanmade") # score = judged humanmade
+shoebox = encoding_stats(encoding, "shoebox") # score = judged smaller than a shoebox
+outdoors = encoding_stats(encoding, "outdoors") # score = judged outdoors
+
+humanmade_rm = encoding_stats(encoding_remove, "humanmade") # score = judged humanmade
+shoebox_rm = encoding_stats(encoding_remove, "shoebox") # score = judged smaller than a shoebox
+outdoors_rm = encoding_stats(encoding_remove, "outdoors") # score = judged outdoors
+
+```
+
+## 2.2 Emotional
+
+```{r emotionality score (average likert score)}
+
+emotional = encoding_emotional[, .(score = mean(response_z), sd = sd(response_z)), by=stimulus]
+emotional_rm = rm_encoding_emotional[, .(score = mean(response_z), sd = sd(response_z)), by=stimulus]
+
+```
+
+## 2.3 Visualize distributions
+
+```{r Histograms of scores}
+
+hist(humanmade$score); mean(humanmade$score)
+hist(shoebox$score); mean(shoebox$score)
+hist(outdoors$score); mean(outdoors$score)
+hist(emotional$score); mean(emotional$score)
+
+hist(humanmade_rm$score); mean(humanmade_rm$score) 
+hist(shoebox_rm$score); mean(shoebox_rm$score)
+hist(outdoors_rm$score); mean(outdoors_rm$score)
+hist(emotional_rm$score); mean(emotional_rm$score)
+
+```
+
+
+# Export data to table
+
+```{r create one data table for encoding information}
+
+# make a big data table with encoding information
+emotional_humanmade = merge(emotional_rm, humanmade_rm, by="stimulus", suffixes = c("_emotional", "_humanmade"))
+outdoors_shoebox = merge(outdoors_rm, shoebox_rm, by="stimulus", suffixes = c("_outdoors", "_shoebox"))
+encoding_dt = merge(emotional_humanmade, outdoors_shoebox)
+
+```
+
+```{r implement pass/fail}
+
+encoding_dt = encoding_dt[score_humanmade >= 0.8 | score_humanmade <= 0.2, humanmade_pass := 1][score_humanmade <= 0.8 & score_humanmade >= 0.2, humanmade_pass := 0]
+
+encoding_dt = encoding_dt[score_outdoors >= 0.8, outdoors_pass := 1]
+encoding_dt = encoding_dt[score_outdoors <= 0.2, outdoors_pass := 1]
+encoding_dt = encoding_dt[score_outdoors <= 0.8 & score_outdoors >= 0.2, outdoors_pass := 0]
+
+encoding_dt = encoding_dt[score_shoebox >= 0.8, shoebox_pass := 1]
+encoding_dt = encoding_dt[score_shoebox <= 0.2, shoebox_pass := 1]
+encoding_dt = encoding_dt[score_shoebox <= 0.8 & score_shoebox >= 0.2, shoebox_pass := 0]
+
+```
+
+```{r designate images as their modal repsonse}
+
+encoding_dt[humanmade_pass == "1" & score_humanmade >= 0.8, humanmade_response := "human-made"]
+encoding_dt[humanmade_pass == "1" & score_humanmade <= 0.2, humanmade_response := "natural"]
+
+encoding_dt[outdoors_pass == "1" & score_outdoors >= 0.8, outdoors_response := "outdoors"]
+encoding_dt[outdoors_pass == "1" & score_outdoors <= 0.2, outdoors_response := "indoors"]
+
+encoding_dt[shoebox_pass == "1" & score_shoebox >= 0.8, shoebox_response := "smaller than a shoebox"]
+encoding_dt[shoebox_pass == "1" & score_shoebox <= 0.2, shoebox_response := "larger than a shoebox"]
+
+write.csv(encoding_dt, file = paste(data_dir, "encoding_dt.csv", sep=""))
+
+```
