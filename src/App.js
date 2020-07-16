@@ -12,7 +12,7 @@ import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
 
 function App() {
   return (
-    <div>
+    <div style={{position: 'absolute', left: '36%', fontFamily: 'Arial'}}>
       <HeaderComponent/>
       <OneComponent/>
       <TwoComponent/>
@@ -28,8 +28,8 @@ function App() {
 function HeaderComponent(){
   return(
     <div>
-      <p>Welcome to the</p>
-      <p>Object Project</p>
+      <p style={{position:'relative', left: '37%', fontSize: 14, fontWeight: "bold"}}>Welcome to the</p>
+      <p style={{position: 'relative', left: '26%', fontSize: 28, fontWeight: "bold"}}>OBJECT PROJECT</p>
     </div>
   );
   
@@ -37,15 +37,11 @@ function HeaderComponent(){
 function OneComponent() {
   return(
     <div>
-      <Filter1RoundedIcon/>
-      <Filter2RoundedIcon/>
-      <Filter3RoundedIcon/>
-      <Filter4RoundedIcon/>
-      <Filter5RoundedIcon/>
-      <p>
+      <Filter1RoundedIcon style={{position: 'absolute', left: '-30px'}}/>
+      <p style={{fontWeight: "bold"}}>
         Please select your target directory.
       </p>
-      <Button>
+      <Button style={{position: 'relative', left: '43%', backgroundColor:'#3f50b5'}}>
         SELECT
       </Button>
     </div>
@@ -54,7 +50,8 @@ function OneComponent() {
 function TwoComponent() {
   return(
     <div>
-      <p>
+      <Filter2RoundedIcon style={{position: 'absolute', left: '-30px'}}/>
+      <p style={{fontWeight: "bold"}}>
       How many groups of images would you like? How many images in each group?
       </p>
       <form>
@@ -68,8 +65,10 @@ function TwoComponent() {
 
 function ThreeComponent() {
   return(
+    
     <div>
-      <p>
+      <Filter3RoundedIcon style={{position: 'absolute', left: '-30px'}}/>
+      <p style={{fontWeight: "bold"}}>
         Please Select one from the following three orientation questions.
       </p>
       <FormControl>
@@ -100,23 +99,30 @@ function ThreeComponent() {
 }
 
 function FourComponent() {
+  const divStyle = {
+    width: 360,
+  } 
   return(
-    <div>
-      <p>Please fill out the following information about your images. (Optional)</p>
+    <div style={divStyle}>
+      <Filter4RoundedIcon style={{position: 'absolute', left: '-30px'}}/>
+      <p style={{fontWeight: "bold"}}>Please fill out the following information about your images. (Optional)</p>
       <p>a) How memorable should your objects be?</p>
       <Slider
+        style={{position: 'relative', top:30}}
         defaultValue={50}
         step={1}
         valueLabelDisplay="on"
       />
       <p>b) How nameable should your objects be?</p>
       <Slider
+        style={{position: 'relative', top:30}}
         defaultValue={50}
         step={1}
         valueLabelDisplay="on"
       />
       <p>c) How emotional should your objects be?</p>
       <Slider
+        style={{position: 'relative', top:30}}
         defaultValue={50}
         step={1}
         valueLabelDisplay="on"
@@ -129,7 +135,8 @@ function FourComponent() {
 function FiveComponent() {
   return(
     <div>
-      <p>
+      <Filter5RoundedIcon style={{position: 'absolute', left: '-30px'}}/>
+      <p style={{fontWeight: "bold"}}>
         Would you like the stimuli to be unique from one another? (i.e. only one airplane)
       </p>
       <span>No</span>
