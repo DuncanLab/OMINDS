@@ -11,13 +11,20 @@ import Filter4RoundedIcon from '@material-ui/icons/Filter4Rounded';
 import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
 
 function App() {
+  const separatingDivStyle = {
+    height: 30
+  }
   return (
     <div style={{position: 'absolute', left: '36%', fontFamily: 'Arial'}}>
       <HeaderComponent/>
       <OneComponent/>
+      <div style={separatingDivStyle}></div>
       <TwoComponent/>
+      <div style={separatingDivStyle}></div>
       <ThreeComponent/>
+      <div style={separatingDivStyle}></div>
       <FourComponent/>
+      <div style={separatingDivStyle}></div>
       <FiveComponent/>
     </div>
 
