@@ -1,4 +1,8 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## How to start the application
+1. Install Node via an [installer](https://nodejs.org/en/download/) or a package manager  
+2. Go to the root of the project directory and run `npm install`
+3. Run `npm start` to serve @localhost:3000.
+4. Run `npm run electron-start`, and you should see a window at this point :)
 
 ## Available Scripts
 
