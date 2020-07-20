@@ -154,4 +154,18 @@ function FiveComponent() {
     </div>
   );
 }
+
+var PythonShell = require('python-shell');
+
+// this is the function to call once the user clicks submit
+function start_python_script() {
+  let options = {
+    scriptPath: '../scripts/',
+    args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents'] // TODO: get actual values from the form
+  };
+  PythonShell.run('main.py', options, function (err, results) {
+    if (err) throw err;
+    console.log('results: %j', results);
+  });
+}
 export default App;
