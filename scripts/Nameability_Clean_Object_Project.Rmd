@@ -90,7 +90,7 @@ data_clean = read.csv("/Users/sarahberger/Desktop/ObjectProject/old_nameability.
 ## Organize the data table by stimulus
 ```{r organize table by stimulus} 
 
-data_clean=tbl_dt(data_clean)
+data_clean=tbl_dt(data_clean) #should have done trimws() here
 
 amount = data_clean[, .N, by = stimulusitem2] #how many stimulus presentations for each? Extra batch has double the presentations
 
@@ -179,6 +179,8 @@ unique_responses[suggested == "character", suggested := ""]
 
 unique_responses[suggested == "", corrected_response := lower_response]
 
+unique_responses$corrected_response <- trimws(unique_responses$corrected_response)
+
 write_csv(unique_responses, "checkforspelling.csv")
 ```
 
@@ -197,6 +199,15 @@ nameability_dt[!modal_response %in% nonunique_list, unique := 1]
 
 ```
 
+
+#scale the nameability
+```{r scaled nameability}
+
+nameability_dt[, scaled_name := percent_rank(h_index)]
+
+```
+
+
 # Export data to table
 
 ```{r}
@@ -214,6 +225,6 @@ orientation_dt = tbl_dt(read.csv("orientation_dt.csv"))
 full_dt_pf = left_join(memorability_dt, orientation_dt)
 full_dt_pf = left_join(full_dt_pf, nameability_dt)
 
-write_csv(full_dt_pf, "full_dt_pf")
+write_csv(full_dt_pf, "full_dt_pf.csv")
 ```
 

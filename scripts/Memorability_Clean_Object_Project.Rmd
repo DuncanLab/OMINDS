@@ -12,7 +12,7 @@ editor_options:
 ```{r load packages}
 
 rm(list = ls()) #run this line to clear your environment
-library(lme4); library(lmerTest); library(tidyverse); library(data.table); library(dtplyr); library(modes); library(mixtools)
+library(lme4); library(lmerTest); library(tidyverse); library(data.table); library(dtplyr); library(modes); library(mixtools); library(psych); library(effsize)
 
 data_dir = "/Users/sarahberger/Desktop/ObjectProject/datafiles/"
 
@@ -732,6 +732,264 @@ manmade_hist <- stats_by_batch[condition == "manmade", ] %>%
 ```
 
 
+# Analysis 5: Run simulations to show how great the software is
+
+## 5.1: Function for simulating increasing stimuli per condition
+
+```{r}
+
+#create a vector with each individual subject and their hit rate
+HR_sub = data[, .(HR = mean(correct)), by = participant]
+HR_sub = sample_n(as.data.frame(HR_sub), 20, replace = TRUE)
+
+HR_sub$HR_2 = (HR_sub$HR - rnorm(1, mean = .1, sd = .1)) #condition 2 is 1 sd lower than cond 1
+HR_sub$HR_2[HR_sub$HR_2>=1] <- .999 #hit rate can't be above 1
+HR_sub = tbl_dt(HR_sub)
+
+#create a vector with each individual stimulus and their hit rate
+HR_stim = data[, .(HR = mean(correct)), by = stimulus]
+
+# function for simulating different stimuli per condition
+# how does adding more stimuli per condition impact effect size
+# each iteration has to increase number of stim selected
+# number of conditions is 2
+sim_SPC <- function (stim_per_group = 10) { #can change stim per group to be more bc we are sampling with replacement
+  
+  ef=matrix(nrow=stim_per_group,ncol=1)
+  
+  cond1 = vector()
+  cond2 = vector()
+  
+  for (i in c(1:stim_per_group)){
+    print(paste("number of stimuli per group =", i))
+    
+    for (j in HR_sub$participant){
+      
+      print(paste("current participant =", j))
+      
+      cond1_stim = sample(HR_stim$stimulus, size = i, replace = TRUE) # sample each stimulus i times with replacement
+      cond2_stim = sample(HR_stim$stimulus, size = i, replace = TRUE)
+      
+      for (stim1 in cond1_stim){
+        
+        prob1_stim = HR_stim[stimulus == stim1]$HR #probability of getting that stimulus correct
+        odds1_stim = (prob1_stim/(1-prob1_stim)) #odds of getting that stimulus correct
+        prob1_sub = HR_sub[participant == j]$HR #probability participant is correct
+        odds1_sub = (prob1_sub/(1-prob1_sub)) #odds participant is correct
+        
+        los = (log(odds1_stim) + log(odds1_sub))/2 #log odds sum
+        odds1 = exp(los) 
+        prob1 = odds1/(1+odds1) #convert log odds back to probability
+        
+        cond1_correct = rbinom(1, 1, prob = prob1) 
+        
+        
+        cond1 = append(cond1, cond1_correct)}
+      
+      for (stim2 in cond2_stim){
+        
+        prob2_stim = HR_stim[stimulus == stim2]$HR #probability of getting that stimulus correct
+        odds2_stim = (prob2_stim/(1-prob2_stim)) #odds of getting that stimulus correct
+        prob2_sub = HR_sub[participant == j]$HR_2 #probability participant is correct
+        odds2_sub = (prob2_sub/(1-prob2_sub)) #odds participant is correct
+        
+        los2 = (log(odds2_stim) + log(odds2_sub))/2 #log odds sum
+        odds2 = exp(los2) 
+        prob2 = odds2/(1+odds2) #convert log odds back to probability
+        
+        cond2_correct = rbinom(1, 1, prob = prob2)
+        
+        
+        cond2 = append(cond2, cond2_correct)
+        
+      }
+    }
+    ef[i,] = cohen.d(cond1, cond2, paired = T)$estimate
+    cond1 = vector()
+    cond2 = vector()
+  }
+  return(ef)
+  
+}
+
+#test = sim_SPC(stim_per_group = 20)
+
+test3 = sim_SPC(stim_per_group = 10)
+
+```
+
+```{r make the function iterate}
+
+#create a vector with each individual subject and their hit rate
+HR_sub = data[, .(HR = mean(correct)), by = participant]
+HR_sub = sample_n(as.data.frame(HR_sub), 20, replace = TRUE)
+
+HR_sub$HR_2 = (HR_sub$HR - rnorm(1, mean = .1, sd = .1)) #condition 2 is 1 sd lower than cond 1
+HR_sub$HR_2[HR_sub$HR_2>=1] <- .999 #hit rate can't be above 1
+HR_sub = tbl_dt(HR_sub)
+
+#create a vector with each individual stimulus and their hit rate
+HR_stim = data[, .(HR = mean(correct)), by = stimulus]
+
+stimpergroup = seq(1,46,5)
+
+sim_SPC_iter <- function (n_iter = 1000) { #input how many interations to run
+  
+  ef=matrix(nrow=n_iter,ncol=length(stimpergroup))
+  colnames(ef) <- stimpergroup
+  
+  cond1 = vector()
+  cond2 = vector()
+  
+  for (h in c(1:n_iter)){  
+    
+    stimindex = 0
+    for (i in stimpergroup){ # 1-50 stim per group, going up by 5 each time
+      print(paste("number of stimuli per group =", i))
+      
+      stimindex = stimindex+1
+      
+      for (j in HR_sub$participant){
+        
+        print(paste("current participant =", j))
+        
+        cond1_stim = sample(HR_stim$stimulus, size = i, replace = TRUE) # sample each stimulus i times with replacement
+        cond2_stim = sample(HR_stim$stimulus, size = i, replace = TRUE)
+        
+        for (stim1 in cond1_stim){
+          
+          prob1_stim = HR_stim[stimulus == stim1]$HR #probability of getting that stimulus correct
+          odds1_stim = (prob1_stim/(1-prob1_stim)) #odds of getting that stimulus correct
+          prob1_sub = HR_sub[participant == j]$HR #probability participant is correct
+          odds1_sub = (prob1_sub/(1-prob1_sub)) #odds participant is correct
+          
+          los = (log(odds1_stim) + log(odds1_sub))/2 #log odds sum
+          odds1 = exp(los) 
+          prob1 = odds1/(1+odds1) #convert log odds back to probability
+          
+          cond1_correct = rbinom(1, 1, prob = prob1) 
+          
+          
+          cond1 = append(cond1, cond1_correct)}
+        
+        for (stim2 in cond2_stim){
+          
+          prob2_stim = HR_stim[stimulus == stim2]$HR #probability of getting that stimulus correct
+          odds2_stim = (prob2_stim/(1-prob2_stim)) #odds of getting that stimulus correct
+          prob2_sub = HR_sub[participant == j]$HR_2 #probability participant is correct
+          odds2_sub = (prob2_sub/(1-prob2_sub)) #odds participant is correct
+          
+          los2 = (log(odds2_stim) + log(odds2_sub))/2 #log odds sum
+          odds2 = exp(los2) 
+          prob2 = odds2/(1+odds2) #convert log odds back to probability
+          
+          cond2_correct = rbinom(1, 1, prob = prob2)
+          
+          
+          cond2 = append(cond2, cond2_correct)
+          
+        }
+      }
+      ef[h,stimindex] = cohen.d(cond1, cond2, paired = T, na.rm = T)$estimate
+      cond1 = vector()
+      cond2 = vector()
+    }
+  }
+  return(ef)
+}
+
+test_5.1 = sim_SPC_iter()
+
+colMeans(test_5.1, na.rm=T)
+
+test5.1_10iter = test_5.1
+
+#test_5.1=sim_SPC_iter(n_iter = 1000) # dont want to accidentally rerun
+
+write.csv(test_5.1, "test_5.1.csv")
+
+```
+
+
+
+## 5.2: Function for simulating increasing stimuli per condition, without including stimulus variability 
+
+```{r remove stimulus variability as a factor}
+HR_sub = data[, .(HR = mean(correct)), by = participant]
+HR_sub = sample_n(as.data.frame(HR_sub), 20, replace = TRUE)
+
+HR_sub$HR_2 = (HR_sub$HR - rnorm(1, mean = .1, sd = .1)) #condition 2 is 1 sd lower than cond 1
+HR_sub$HR_2[HR_sub$HR_2>=1] <- .999 #hit rate can't be above 1
+HR_sub = tbl_dt(HR_sub)
+
+#create a vector with each individual stimulus and their hit rate
+HR_stim = data[, .(HR = mean(correct)), by = stimulus]
+
+stimpergroup = seq(1,46,5)
+
+sim_SPC_iter_nostimvar <- function (n_iter = 10) { #input how many interations to run
+  
+  ef=matrix(nrow=n_iter,ncol=length(stimpergroup))
+  colnames(ef) <- stimpergroup
+  
+  cond1 = vector()
+  cond2 = vector()
+  
+  for (h in c(1:n_iter)){  
+    
+    print(paste("iteration =", h))
+    stimindex = 0
+    for (i in stimpergroup){ # 1-50 stim per group, going up by 5 each time
+      #print(paste("number of stimuli per group =", i))
+      
+      stimindex = stimindex+1
+      
+      for (j in HR_sub$participant){
+        
+        #print(paste("current participant =", j))
+        
+        cond1_stim = sample(HR_stim$stimulus, size = i, replace = TRUE) # sample each stimulus i times with replacement
+        cond2_stim = sample(HR_stim$stimulus, size = i, replace = TRUE)
+        
+        for (stim1 in cond1_stim){
+          
+          prob1_sub = HR_sub[participant == j]$HR #probability participant is correct
+   
+          cond1_correct = rbinom(1, 1, prob = prob1_sub) 
+          
+          cond1 = append(cond1, cond1_correct)}
+        
+        for (stim2 in cond2_stim){
+
+          prob2_sub = HR_sub[participant == j]$HR_2 #probability participant is correct
+          
+          cond2_correct = rbinom(1, 1, prob = prob2_sub)
+          
+          cond2 = append(cond2, cond2_correct)
+          
+        }
+      }
+      ef[h,stimindex] = cohen.d(cond1, cond2, paired = T, na.rm = T)$estimate
+      cond1 = vector()
+      cond2 = vector()
+    }
+  }
+  return(ef)
+}
+
+test5.2 = sim_SPC_iter_nostimvar()
+colMeans(test5.2)
+
+test5.2_10iter = test5.2
+
+#test_5.2 = sim_SPC_iter_nostimvar(n_iter=1000) #don't want to re-run
+write.csv(test_5.2, "test_5.2.csv")
+colMeans(test_5.2)
+
+```
+
+
+
 # Export data frame that will be used in algorithm
 
 ```{r create memorability_dt}
@@ -742,3 +1000,4 @@ memorability_dt[, scaled_memory_hits := percent_rank(memorability)]
 
 write_csv(memorability_dt, "memorability_dt.csv")
 ```
+

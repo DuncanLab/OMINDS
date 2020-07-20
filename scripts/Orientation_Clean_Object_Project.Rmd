@@ -363,6 +363,26 @@ encoding_dt[outdoors_pass == "1" & score_outdoors <= 0.2, outdoors_response := "
 encoding_dt[shoebox_pass == "1" & score_shoebox >= 0.8, shoebox_response := "smaller than a shoebox"]
 encoding_dt[shoebox_pass == "1" & score_shoebox <= 0.2, shoebox_response := "larger than a shoebox"]
 
-write.csv(encoding_dt, file = paste(data_dir, "encoding_dt.csv", sep=""))
+write.csv(encoding_dt, file = paste(data_dir, "orientation_dt.csv", sep=""))
 
 ```
+
+```{r scale emotional response}
+encoding_dt[, scaled_emotional := percent_rank(score_emotional)]
+
+write.csv(encoding_dt, file = paste(data_dir, "orientation_dt.csv", sep=""))
+```
+
+
+# Analysis 3: Mean encoding reaction time by orientation question
+Fastest respondes to be used as the orientation question for the extra experiment
+```{r find mean encoding reaction times}
+
+mean_rts = data_full[trialcode== "encoding", .(mean_rt  = mean(latency)), by = condition]
+
+mean_rts_clean = encoding_clean[trialcode== "encoding", .(mean_rt  = mean(latency)), by = condition]
+
+# use humanmade
+
+```
+
