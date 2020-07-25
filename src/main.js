@@ -17,7 +17,7 @@ function createWindow() {
   let options = {
     mode: 'text',
     // pythonPath: 'path/to/python',
-    pythonOptions: ['-u'], // get print results in real-time
+    pythonOptions: ['-u', '-W ignore'], // get print results in real-time
     scriptPath: '/home/scott/Documents/Duncan Lab/ObjectProjectApp/scripts/',
     args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents/']
   };

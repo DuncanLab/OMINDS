@@ -42,7 +42,7 @@ if __name__ == "__main__":
     DT = pd.read_csv("{}/scripts/full_dt_pf.csv".format(curr))
     DT_list = [DT]
 
-    image_directory = "./objects/"
+    image_directory = "{}/scripts/objects/".format(curr)
 
     folder_list = []
     total_stim = num_folders * num_stimuli
