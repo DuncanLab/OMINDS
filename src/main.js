@@ -1,6 +1,7 @@
 const {app, BrowserWindow, Menu} = require('electron')
 const url = require('url');
 const path = require('path');
+let {PythonShell} = require('python-shell');
 
 let win = null;
 
@@ -11,14 +12,21 @@ function createWindow() {
   // Initialize the window
   win = new BrowserWindow({});
 
-  // for static file, we can see which one we actually need
-  // win.loadURL(url.format({
-  //   pathname: path.join(__dirname, '../public/index.html'),
-  //   protocol: 'file',
-  //   slashes: true
-  // }));
+  // var pyshell =  require('python-shell');
 
-  // this loads localhost
+  let options = {
+    mode: 'text',
+    // pythonPath: 'path/to/python',
+    pythonOptions: ['-u'], // get print results in real-time
+    scriptPath: '/home/scott/Documents/Duncan Lab/ObjectProjectApp/scripts/',
+    args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents/']
+  };
+   
+  PythonShell.run('main.py', options, function (err, results) {
+    if (err) throw err;
+    console.log('results: %j', results);
+  });
+  
   win.loadURL("http://localhost:3000/")
 
 
@@ -30,7 +38,11 @@ function createWindow() {
 
 
 app.on('ready', function () {
-  createWindow();
+  createWindow(); 
+PythonShell.runString('print(1+1)', null, function (err) {
+  if (err) throw err;
+  console.log('finished');
+});
 });
 
 app.on('activate', () => {

@@ -38,10 +38,11 @@ if __name__ == "__main__":
     ################################## STEP 0: ORGANIZE ###################################
 
     #### WHERE STUFF IS STORED ####
-    DT = pd.read_csv("full_dt_pf.csv")
+    curr = os.getcwd()
+    DT = pd.read_csv("{}/scripts/full_dt_pf.csv".format(curr))
     DT_list = [DT]
 
-    image_directory = "./objects"
+    image_directory = "./objects/"
 
     folder_list = []
     total_stim = num_folders * num_stimuli

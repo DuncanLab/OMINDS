@@ -9,6 +9,7 @@ import Filter2RoundedIcon from '@material-ui/icons/Filter2Rounded';
 import Filter3RoundedIcon from '@material-ui/icons/Filter3Rounded';
 import Filter4RoundedIcon from '@material-ui/icons/Filter4Rounded';
 import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
+import {PythonShell} from 'python-shell';
 
 function App() {
   const separatingDivStyle = {
@@ -26,6 +27,8 @@ function App() {
       <FourComponent/>
       <div style={separatingDivStyle}></div>
       <FiveComponent/>
+      <div style={separatingDivStyle}></div>
+      <Submit/>
     </div>
 
     
@@ -48,8 +51,9 @@ function OneComponent() {
       <p style={{fontWeight: "bold"}}>
         Please select your target directory.
       </p>
-      <Button style={{position: 'relative', left: '43%', backgroundColor:'#3f50b5'}}>
+      <Button varient="contained" component="label" style={{position: 'relative', left: '43%', backgroundColor:'#3f50b5'}}>
         SELECT
+        <input directory="" webkitdirectory="" type="file" style={{display: "none"}}   />
       </Button>
     </div>
   );
@@ -99,9 +103,6 @@ function ThreeComponent() {
         </FormGroup>
       </FormControl>
     </div>
-
-
-    
   );
 }
 
@@ -155,17 +156,24 @@ function FiveComponent() {
   );
 }
 
-var PythonShell = require('python-shell');
+function Submit() {
+  return (<Button variant="contained">Submit</Button>);
+}
+
 
 // this is the function to call once the user clicks submit
 function start_python_script() {
-  let options = {
-    scriptPath: '../scripts/',
-    args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents'] // TODO: get actual values from the form
-  };
-  PythonShell.run('main.py', options, function (err, results) {
+  PythonShell.runString('print(1+1)', null, function (err) {
     if (err) throw err;
-    console.log('results: %j', results);
+    console.log('finished');
   });
+  // let options = {
+  //   scriptPath: '../scripts/',
+  //   args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents'] // TODO: get actual values from the form
+  // };
+  // PythonShell.run('main.py', options, function (err, results) {
+  //   if (err) throw err;
+  //   console.log('results: %j', results);
+  // });
 }
 export default App;
