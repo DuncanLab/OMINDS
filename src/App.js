@@ -9,7 +9,8 @@ import Filter2RoundedIcon from '@material-ui/icons/Filter2Rounded';
 import Filter3RoundedIcon from '@material-ui/icons/Filter3Rounded';
 import Filter4RoundedIcon from '@material-ui/icons/Filter4Rounded';
 import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
-import {PythonShell} from 'python-shell';
+
+const {electronSend} = electron;
 
 function App() {
   const separatingDivStyle = {
@@ -157,23 +158,11 @@ function FiveComponent() {
 }
 
 function Submit() {
-  return (<Button variant="contained">Submit</Button>);
+  return (<Button variant="contained" onClick={() => {
+    e.preventDefault();
+    electronSend.send('name', document.getElementById('username').value);
+  }
+  }>Submit</Button>);
 }
 
-
-// this is the function to call once the user clicks submit
-function start_python_script() {
-  PythonShell.runString('print(1+1)', null, function (err) {
-    if (err) throw err;
-    console.log('finished');
-  });
-  // let options = {
-  //   scriptPath: '../scripts/',
-  //   args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents'] // TODO: get actual values from the form
-  // };
-  // PythonShell.run('main.py', options, function (err, results) {
-  //   if (err) throw err;
-  //   console.log('results: %j', results);
-  // });
-}
 export default App;

@@ -1,4 +1,4 @@
-const {app, BrowserWindow, Menu} = require('electron')
+const {app, BrowserWindow, Menu, electronSend} = require('electron')
 const url = require('url');
 const path = require('path');
 let {PythonShell} = require('python-shell');
@@ -37,12 +37,8 @@ function createWindow() {
 }
 
 
-app.on('ready', function () {
+app.on('ready', () => {
   createWindow(); 
-PythonShell.runString('print(1+1)', null, function (err) {
-  if (err) throw err;
-  console.log('finished');
-});
 });
 
 app.on('activate', () => {
@@ -51,8 +47,12 @@ app.on('activate', () => {
   }
 })
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   if (process.platform != 'darwin') {
     app.quit();
   }
+});
+
+electronSend.on('form_data', e => {
+  // handle the form data
 });
