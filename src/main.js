@@ -18,7 +18,7 @@ function createWindow() {
     mode: 'text',
     // pythonPath: 'path/to/python',
     pythonOptions: ['-u', '-W ignore'], // get print results in real-time
-    scriptPath: '/home/scott/Documents/Duncan Lab/ObjectProjectApp/scripts/',
+    scriptPath: './scripts/',
     args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents/']
   };
    
