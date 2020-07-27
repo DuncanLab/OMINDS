@@ -10,7 +10,7 @@ import Filter3RoundedIcon from '@material-ui/icons/Filter3Rounded';
 import Filter4RoundedIcon from '@material-ui/icons/Filter4Rounded';
 import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
 
-const {electronSend} = electron;
+const { ipcRenderer } = window.require("electron");
 
 function App() {
   const separatingDivStyle = {
@@ -31,8 +31,6 @@ function App() {
       <div style={separatingDivStyle}></div>
       <Submit/>
     </div>
-
-    
   );
 }
 
@@ -159,8 +157,7 @@ function FiveComponent() {
 
 function Submit() {
   return (<Button variant="contained" onClick={() => {
-    e.preventDefault();
-    electronSend.send('name', document.getElementById('username').value);
+    ipcRenderer.send('submitForm', "test");
   }
   }>Submit</Button>);
 }

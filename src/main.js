@@ -1,4 +1,4 @@
-const {app, BrowserWindow, Menu, electronSend} = require('electron')
+const {app, BrowserWindow, Menu, ipcMain} = require('electron')
 const url = require('url');
 const path = require('path');
 let {PythonShell} = require('python-shell');
@@ -18,7 +18,7 @@ function createWindow() {
     mode: 'text',
     // pythonPath: 'path/to/python',
     pythonOptions: ['-u', '-W ignore'], // get print results in real-time
-    scriptPath: './scripts/',
+    scriptPath: '/home/scott/Documents/Duncan Lab/ObjectProjectApp/scripts/',
     args: ['2', '3', '90', '80', '70', 'shoebox', 'y', '~/Documents/']
   };
    
@@ -53,6 +53,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-electronSend.on('form_data', e => {
-  // handle the form data
+ipcMain.on('form_data', function(event, data) {
+  console.log(data);
 });
