@@ -10,9 +10,11 @@ Menu.setApplicationMenu(null)
 
 function createWindow() {
   // Initialize the window
-  win = new BrowserWindow({});
-
-  // var pyshell =  require('python-shell');
+  win = new BrowserWindow({
+  //   webPreferences: {
+  //     preload: __dirname + '/preload.js'
+  // }
+  });
 
   let options = {
     mode: 'text',
@@ -43,7 +45,11 @@ app.on('ready', () => {
 
 app.on('activate', () => {
   if (win === null) {
-    createWindow()
+    createWindow();
+    ipcMain.on('submitForm', function(event, data) {
+      // Access form data here
+      console.log(data);
+   });
   }
 })
 
@@ -53,6 +59,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-ipcMain.on('form_data', function(event, data) {
-  console.log(data);
-});
+// ipcMain.on('form_data', function(event, data) {
+//   console.log(data);
+// });

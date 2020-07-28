@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Button from '@material-ui/core/Button';
 import { Switch, TextField, Checkbox, FormGroup, FormControl, Slider} from '@material-ui/core';
 import FormLabel from '@material-ui/core/FormLabel';
@@ -10,7 +10,7 @@ import Filter3RoundedIcon from '@material-ui/icons/Filter3Rounded';
 import Filter4RoundedIcon from '@material-ui/icons/Filter4Rounded';
 import Filter5RoundedIcon from '@material-ui/icons/Filter5Rounded';
 
-const { ipcRenderer } = window.require("electron");
+// const { ipcRenderer } = window.require("electron");
 
 function App() {
   const separatingDivStyle = {
@@ -157,6 +157,7 @@ function FiveComponent() {
 
 function Submit() {
   return (<Button variant="contained" onClick={() => {
+    let ipcRenderer = require('electron').ipcRenderer;
     ipcRenderer.send('submitForm', "test");
   }
   }>Submit</Button>);
