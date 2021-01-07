@@ -1,0 +1,147 @@
+---
+title: "Extra Object Project Experiment"
+author: "Sarah"
+date: "27/07/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load in Data
+
+```{r load packages}
+
+rm(list = ls()) #run this line to clear your environment
+library(lme4); library(lmerTest); library(tidyverse); library(data.table); library(dtplyr); library(effsize); library(pwr)
+
+data_dir = "~/Desktop/ObjectProject/extra experiment/data/"
+
+
+
+```
+
+```{r load data and save CSV filename to a new column}
+relevantData = list.files(path = data_dir, full.names = TRUE)
+
+data = data.table()
+for (i in relevantData) {
+  df_temp = setDT(read.csv(i))
+  df_temp[, filename := i]
+  data = rbind(data, df_temp)
+}
+
+data = setDT(data)
+
+```
+
+```{r new columns to denote condition and batch}
+
+data$group = NULL #remove group col
+
+#identify batches 
+data[grep(pattern = "extraexperiment_1_", x = filename, ), batch := 1 ]
+data[grep(pattern = "extraexperiment_2_", x = filename, ), batch := 2 ]
+data[grep(pattern = "extraexperiment_3_", x = filename, ), batch := 3 ]
+data[grep(pattern = "extraexperiment_4_", x = filename, ), batch := 4 ]
+data[grep(pattern = "extraexperiment_5_", x = filename, ), batch := 5 ]
+data[grep(pattern = "extraexperiment_6_", x = filename, ), batch := 6 ]
+data[grep(pattern = "extraexperiment_7_", x = filename, ), batch := 7 ]
+data[grep(pattern = "extraexperiment_8_", x = filename, ), batch := 8 ]
+data[grep(pattern = "extraexperiment_9_", x = filename, ), batch := 9 ]
+data[grep(pattern = "extraexperiment_10_", x = filename, ), batch := 10 ]
+data[grep(pattern = "extraexperiment_11_", x = filename, ), batch := 11 ]
+data[grep(pattern = "extraexperiment_12_", x = filename, ), batch := 12 ]
+data[grep(pattern = "extraexperiment_13_", x = filename, ), batch := 13 ]
+data[grep(pattern = "extraexperiment_14_", x = filename, ), batch := 14 ]
+data[grep(pattern = "extraexperiment_15_", x = filename, ), batch := 15 ]
+data[grep(pattern = "extraexperiment_16_", x = filename, ), batch := 16 ]
+
+to_assign_ids = data[, .N, keyby = .(subject, batch)] 
+to_assign_ids[, participant := 1:.N] #add new participant column
+to_assign_ids$N = NULL
+
+data = left_join(data, to_assign_ids)
+
+data = data %>% arrange(participant) %>% select(participant, everything()) # arrange by participant
+
+# remove unnecessary columns
+
+data$filename = NULL
+
+# rename key presses for retrieval phase to be interpretable
+data[blockcode == "retrieval" & response == "36", response := "old"]
+data[blockcode == "retrieval" & response == "37", response := "new"]
+
+
+```
+
+Maybe remove participants who were bad with data cleaning
+
+# analyse retrieval
+
+```{r view RT latency distribution}
+
+hist(data[blockcode == "retrieval" & latency < 3000]$latency, breaks = 50) #cutoff around 300ms
+
+HR_by_condition = data[latency %between% c(300,1999) & blockcode == "retrieval", .(mean = mean(correct)), by = .(old_object_condition)]
+
+```
+
+```{r try removing participants I said were bad}
+
+#data_clean = data[!batch %in% c(1,7)]
+#view(data_clean[batch == 3 & subject %in% c(5,15)]) #participant 6 and 16
+#view(data_clean[batch == 8 & subject %in% c(4,8)]) # participant 5 and 10
+#data_clean = data_clean[!participant %in% c(5,6,10,16)]
+
+#HR_by_condition_clean = data_clean[latency %between% c(300,1999) & blockcode == "retrieval", .(mean = mean(correct)), by = .(old_object_condition, participant)]
+#unique(HR_by_condition_clean$participant)
+
+```
+
+# data cleaning 
+```{r remove abnormal trial latencies}
+
+retrieval = data[blockcode == "retrieval" & latency %between% c(300,1999)]
+
+exclude_incomplete_retrieval = retrieval[, .N, by = .(participant)][N < 160]$participant #more than half their trials were of abnormal latency or they didn't finish
+
+retrieval = retrieval[!participant %in% c(exclude_incomplete_retrieval)]
+
+```
+
+# calculate effect size
+```{r effect size}
+
+random = retrieval[batch %in% c(1:8)]
+software = retrieval[batch %in% c(9:16)]
+
+unique(random$participant) #38
+unique(software$participant) #40
+
+cohen.d(random[old_object_condition == 1]$correct, random[old_object_condition == 3]$correct)
+
+cohen.d(software[old_object_condition == 1]$correct, software[old_object_condition == 3]$correct)
+
+```
+
+
+# power analysis
+
+```{r power analysis}
+
+# power analysis for random
+pwr.t.test(d = .437, sig.level = .05, power = .8, type = ("paired"))
+# n is 43
+
+
+# power analysis for software
+pwr.t.test(d = .525, sig.level = .05, power = .8, type = ("paired"))
+# n is 30
+
+#this means using the software results in 30% less participants needed to achieve the same power
+#(43-30)/43
+
+```
+
+
