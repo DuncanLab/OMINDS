@@ -160,6 +160,12 @@ software_snippet = software[
     (batch %in% c(13,14) & stimulus %in% snip_13_14) |
     (batch %in% c(15,16) & stimulus %in% snip_15_16)]
 
+software_snippet_with_new = software[
+  (batch %in% c(9,10) & stimulus %in% c(snip_9_10,snip_11_12)) | 
+    (batch %in% c(11,12) & stimulus %in% c(snip_11_12,snip_9_10)) |
+    (batch %in% c(13,14) & stimulus %in% c(snip_13_14,snip_15_16)) |
+    (batch %in% c(15,16) & stimulus %in% c(snip_15_16,snip_13_14))]
+
 snip_1_2 = c("Blanket.jpg", "Candy_Chocolate.jpg", "Cake_Wedding.jpg", "Helmet_Construction.jpg","SculptureMetalFish.jpg", "Notebook.jpg", "GasBurner.jpg", "Guitar_Acoustic.jpg", "Toy_BlocksPlastic Colourful.jpg", "TinChristmas.jpg", "Tickets_Blank.jpg",
 "Desk_School.jpg", "LeatherPuncherTool.jpg", "Toy_StackingRing.jpg", "Drink_Green.jpg", "Bullet.jpg", "Ashtray_Empty.jpg", "NeedlesAcupuncture.jpg","Beater_Electric.jpg", "Generator.jpg")
 snip_3_4 = c("TurkeyDinner.jpg", "Broom_Long.jpg", "Ball_8.jpg", "SkullDeer.jpg", "Shield_Antique.jpg",
@@ -251,7 +257,7 @@ hist(effect_sizes)
 ```
 
 
-# also calculate dprime and not just hit rate
+# also calculate corrected hit rate
 
 ```{r corrected HR}
 #calculate corrected hit rate
@@ -309,7 +315,73 @@ cohen.d(software_snippet[old_object_condition == 1]$avg_mem, software_snippet[ol
 
 #dprime
 
-```{r }
+```{r calculate dprime as well as HR}
+
+effect_sizes <- c()
+
+n = 10
+
+for (i in 1:100) {
+  sample_1 = sample_n(list_1, n)
+  sample_2 = sample_n(list_2, n)
+  sample_3 = sample_n(list_3, n)
+  sample_4 = sample_n(list_4, n)
+  sample_5 = sample_n(list_5, n)
+  sample_6 = sample_n(list_6, n)
+  sample_7 = sample_n(list_7, n)
+  sample_8 = sample_n(list_8, n)
+  
+  
+  snippet = random[
+  ((batch %in% c(1,2,3,4)) & (stimulus %in% sample_1$V1 | stimulus %in% sample_2$V1 | stimulus %in% sample_3$V1 | stimulus %in% sample_4$V1)) | 
+    ((batch %in% c(5,6,7,8)) & (stimulus %in% sample_5$V1 | stimulus %in% sample_6$V1 | stimulus %in% sample_7$V1 | stimulus %in% sample_8$V1))] #this takes only the stimuli that were seen for each batch
+  
+  stats_by_participant = dcast(snippet,
+                           value.var = "correct",
+                           participant ~ old_object_condition,
+                           fill=0,
+                           mean, na.rm=T)
+  stats_by_participant$V1 = NULL
+  names(stats_by_participant)[2:4] = c("FA", "HR_1", "HR_3") # rename to be more descriptive
+  stats_by_participant[, FA := 1-FA] # make FA column actually correspond to FA
+  stats_by_participant[FA==0, FA := 1/80][FA==1, FA := 1-(1/80)] # correct 0s and 1s
+  stats_by_participant[HR_1==0, HR_1 := 1/80][HR_1==1, HR_1 := 1-(1/80)]
+  stats_by_participant[HR_3==0, HR_3 := 1/80][HR_3==1, HR_3 := 1-(1/80)]
+  stats_by_participant[, dprime_1 := qnorm(HR_1) - qnorm(FA)]
+  stats_by_participant[, dprime_3 := qnorm(HR_3) - qnorm(FA)]
+  
+  #snippet = merge(snippet, stats_by_participant, by="participant")
+ 
+  ef = cohen.d(stats_by_participant$dprime_1, stats_by_participant$dprime_3)
+  effect_sizes <- c(effect_sizes, ef$estimate)
+}
+return(effect_sizes)
+
+mean(effect_sizes)
+
+hist(effect_sizes)
+
+
+
+
+# software with dprime
+
+stats_by_participant = dcast(software_snippet_with_new,
+                           value.var = "correct",
+                           participant ~ old_object_condition,
+                           fill=0,
+                           mean, na.rm=T)
+  
+stats_by_participant$V1 = NULL
+names(stats_by_participant)[2:4] = c("FA", "HR_1", "HR_3") # rename to be more descriptive
+  stats_by_participant[, FA := 1-FA] # make FA column actually correspond to FA
+  stats_by_participant[FA==0, FA := 1/80][FA==1, FA := 1-(1/80)] # correct 0s and 1s
+  stats_by_participant[HR_1==0, HR_1 := 1/80][HR_1==1, HR_1 := 1-(1/80)]
+  stats_by_participant[HR_3==0, HR_3 := 1/80][HR_3==1, HR_3 := 1-(1/80)]
+  stats_by_participant[, dprime_1 := qnorm(HR_1) - qnorm(FA)]
+  stats_by_participant[, dprime_3 := qnorm(HR_3) - qnorm(FA)]
+
+ef = cohen.d(stats_by_participant$dprime_1, stats_by_participant$dprime_3)
 
 ```
 
