@@ -119,9 +119,16 @@ software = retrieval[batch %in% c(9:16)]
 unique(random$participant) #38
 unique(software$participant) #40
 
-cohen.d(random[old_object_condition == 1]$correct, random[old_object_condition == 3]$correct)
+allparticipants <- unique(data$participant)
+retrievalparticipants <-unique(retrieval$participant)
 
-cohen.d(software[old_object_condition == 1]$correct, software[old_object_condition == 3]$correct)
+
+cohendfrandom <- random[, .(mean =mean(correct)), by = .(participant, old_object_condition)]
+cohendfsoftware <- software[, .(mean =mean(correct)), by = .(participant, old_object_condition)]
+
+cohen.d(cohendfrandom[old_object_condition == 3]$mean, cohendfrandom[old_object_condition == 1]$mean, paired = T)
+
+cohen.d(cohendfsoftware[old_object_condition == 3]$mean, cohendfsoftware[old_object_condition == 1]$mean, paired = T)
 
 ```
 
@@ -184,9 +191,14 @@ random_snippet = random[
 
 ```{r segmented effect size}
 
-cohen.d(random_snippet[old_object_condition == 1]$correct, random_snippet[old_object_condition == 3]$correct) #.569
+cohendfrandomsnip <- random_snippet[, .(mean =mean(correct)), by = .(participant, old_object_condition)]
 
-cohen.d(software_snippet[old_object_condition == 1]$correct, software_snippet[old_object_condition == 3]$correct) #.69
+cohen.d(cohendfrandomsnip[old_object_condition == 3]$mean, cohendfrandomsnip[old_object_condition == 1]$mean, paired = T) #.569
+
+#calculate mean by participant and condition
+cohendfsoftwaresnip <- software_snippet_with_new[, .(mean =mean(correct)), by = .(participant, old_object_condition)]
+
+cohen.d(cohendfsoftwaresnip[old_object_condition == 3]$mean, cohendfsoftwaresnip[old_object_condition == 1]$mean, paired = T) #1.4
 
 ```
 
@@ -245,14 +257,23 @@ for (i in 1:100) {
     (batch %in% c(5,6) & stimulus %in% sample_5$V1 | stimulus %in% sample_6$V1) |
     (batch %in% c(7,8) & stimulus %in% sample_7$V1 | stimulus %in% sample_8$V1)]
   
-  ef = cohen.d(snippet[old_object_condition == 1]$correct, snippet[old_object_condition == 3]$correct)
+  
+  meansnippet = snippet[, .(mean =mean(correct)), by = .(participant, old_object_condition)]
+  
+  goodparticipants = meansnippet[, .N, by=participant]
+  goodparticipants = goodparticipants[goodparticipants$N == 3,]$participant #if they don't have a value for all three conditions, a paired samples effect size wont work
+  meansnippet = meansnippet[meansnippet$participant %in% goodparticipants,]
+  
+  ef = cohen.d(meansnippet[old_object_condition == 3]$mean, meansnippet[old_object_condition == 1]$mean, paired = T)
   effect_sizes <- c(effect_sizes, ef$estimate)
 }
 return(effect_sizes)
 
-effect_sizes
+mean(effect_sizes)
 
-hist(effect_sizes)
+HR_effect_sizes <-effect_sizes
+
+hist(HR_effect_sizes)
 
 ```
 
@@ -286,14 +307,22 @@ for (i in 1:100) {
     (batch %in% c(5,6) & stimulus %in% sample_5$V1 | stimulus %in% sample_6$V1) |
     (batch %in% c(7,8) & stimulus %in% sample_7$V1 | stimulus %in% sample_8$V1)]
   
-  ef = cohen.d(snippet[old_object_condition == 1]$avg_mem, snippet[old_object_condition == 3]$avg_mem)
+  
+  meansnippet = snippet[, .(mean =mean(avg_mem)), by = .(participant, old_object_condition)]
+  
+  goodparticipants = meansnippet[, .N, by=participant]
+  goodparticipants = goodparticipants[goodparticipants$N == 3,]$participant #if they don't have a value for all three conditions, a paired samples effect size wont work
+  meansnippet = meansnippet[meansnippet$participant %in% goodparticipants,]
+  
+  ef = cohen.d(meansnippet[old_object_condition == 3]$mean, meansnippet[old_object_condition == 1]$mean, paired = T)
   effect_sizes <- c(effect_sizes, ef$estimate)
 }
 return(effect_sizes)
 
-mean(effect_sizes) .52
+mean(effect_sizes) 
 
-hist(effect_sizes) 
+corrected_HR_effect_sizes <- effect_sizes
+hist(corrected_HR_effect_sizes) 
 
 
 
@@ -308,7 +337,11 @@ software_snippet = software[
     (batch %in% c(13,14) & stimulus %in% snip_13_14) |
     (batch %in% c(15,16) & stimulus %in% snip_15_16)]
 
-cohen.d(software_snippet[old_object_condition == 1]$avg_mem, software_snippet[old_object_condition == 3]$avg_mem) #.70
+
+cohendfsoftwaresnip <- software_snippet[, .(mean =mean(avg_mem)), by = .(participant, old_object_condition)]
+
+cohen.d(cohendfsoftwaresnip[old_object_condition == 3]$mean, cohendfsoftwaresnip[old_object_condition == 1]$mean, paired = T) #1.72
+
 
 ```
 
@@ -336,6 +369,7 @@ for (i in 1:100) {
   ((batch %in% c(1,2,3,4)) & (stimulus %in% sample_1$V1 | stimulus %in% sample_2$V1 | stimulus %in% sample_3$V1 | stimulus %in% sample_4$V1)) | 
     ((batch %in% c(5,6,7,8)) & (stimulus %in% sample_5$V1 | stimulus %in% sample_6$V1 | stimulus %in% sample_7$V1 | stimulus %in% sample_8$V1))] #this takes only the stimuli that were seen for each batch
   
+  
   stats_by_participant = dcast(snippet,
                            value.var = "correct",
                            participant ~ old_object_condition,
@@ -352,14 +386,16 @@ for (i in 1:100) {
   
   #snippet = merge(snippet, stats_by_participant, by="participant")
  
-  ef = cohen.d(stats_by_participant$dprime_1, stats_by_participant$dprime_3)
+  ef = cohen.d(stats_by_participant$dprime_3, stats_by_participant$dprime_1, paired = T)
   effect_sizes <- c(effect_sizes, ef$estimate)
 }
 return(effect_sizes)
 
 mean(effect_sizes)
 
-hist(effect_sizes)
+dprime_effect_sizes <- effect_sizes
+
+hist(dprime_effect_sizes)
 
 
 
@@ -381,7 +417,21 @@ names(stats_by_participant)[2:4] = c("FA", "HR_1", "HR_3") # rename to be more d
   stats_by_participant[, dprime_1 := qnorm(HR_1) - qnorm(FA)]
   stats_by_participant[, dprime_3 := qnorm(HR_3) - qnorm(FA)]
 
-ef = cohen.d(stats_by_participant$dprime_1, stats_by_participant$dprime_3)
+ef = cohen.d(stats_by_participant$dprime_3, stats_by_participant$dprime_1, paired = T) #0.79
 
+```
+
+```{r superimpose histograms}
+
+hist_df <- cbind(data.frame(HR_effect_sizes), data.frame(corrected_HR_effect_sizes), data.frame(dprime_effect_sizes))
+hist_df$V1 <- 1:nrow(hist_df)
+
+data_long <- gather(hist_df, V1, factor_key=TRUE)
+data_long
+
+ggplot(data_long) + 
+    geom_histogram(data = data_long[data_long$V1 ==HR_effect_sizes], fill = "red", alpha = 0.2) + 
+    geom_histogram(data = data_long[data_long$V1 == corrected_HR_effect_sizes], fill = "blue", alpha = 0.2) +
+    geom_histogram(data = data_long[data_long$V1 == dprime_effect_sizes], fill = "green", alpha = 0.2) 
 ```
 
