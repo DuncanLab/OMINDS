@@ -1,11 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OPD</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:200,300,400,500,700&display=swap" />
+    <!-- <title>Object Project!</title> -->
 </head>
-<body>
+
+<body style="margin:0;">
+    <!-- <div style="webkit-app-region: drag; background-color: #6200EE; height: 22px">Hello
+    </div> -->
     <div id="root"></div>
+    <script>
+        const customTitlebar = require('custom-electron-titlebar');
+
+        new customTitlebar.Titlebar({
+            backgroundColor: customTitlebar.Color.fromHex('#6200EE')
+        });
+    </script>
+    
 </body>
+
 </html>

@@ -6,127 +6,156 @@ counterbalanced groups based on the input specifications.
 
 '''
 
-import pandas as pd
-# import django
-from scipy.spatial import distance
+
 import os
+import sys
+# install packages in virtual environment. If running in Non GUI mode, comment out the line below.
+os.system('python3 -m pip install pandas scipy')
 import math
 import random
 import shutil
 import cmd
-import sys
+import pandas as pd
+from scipy.spatial import distance
 
 ################################## STEP 0: ORGANIZE ###################################
 
-#### WHERE STUFF IS STORED ####
-os.chdir("/Users/sarahberger/Desktop/ObjectProject/")
-#os.chdir("C:/Users/hanna/Documents/2019-2020/ObjectProject/")
+#### user inputs overrides with arguments
+if(sys.argv[1]):
+    current_dir = sys.argv[1]
+    image_directory = sys.argv[2]
+    num_folders = sys.argv[3]
+    num_stimuli = sys.argv[4]
+    memorability = sys.argv[5]
+    nameability = sys.argv[6]
+    emotionality = sys.argv[7]
+    orientationq = sys.argv[8]
+    unique = sys.argv[9]
+    target_directory = sys.argv[10]
 
-DT = pd.read_csv("full_dt_pf.csv")
-DT_list = [DT]
-
-image_directory = "/Users/sarahberger/Desktop/ObjectProject/stimuli/"
-#image_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/stimuli/"
-
-
-#### USER INPUTS ####
-num_folders = input("Please indicate the number of stimulus groups you would like: ")
-while True:
-    try:
-        int(num_folders)
-    except:
-        print("Only integers are allowed")
-        num_folders = input("Please indicate the number of stimulus groups you would like: ")
-    else:
-        break
-print("you have entered that you would like " + str(num_folders) + " groups of stimuli")
-
-# add except for when they want too many?
-
-num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
-while True:
-    try:
-        int(num_stimuli)
-    except:
-        print("Only integers are allowed")
-        num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
-    else:
-        break
-print("you have entered that you would like " + str(num_stimuli) + " stimuli per group")
-
-num_folders = int(num_folders)
-num_stimuli = int(num_stimuli)
-
-if num_stimuli * num_folders >= 1748:
-    print("You have requested too many stimuli, please try again.")
-    num_folders = input("Please indicate the number of stimulus groups you would like: ")
-    num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
-
-num_folders = int(num_folders)
-num_stimuli = int(num_stimuli)
-
-total_stim = num_stimuli*num_folders
-print("You have requested " + str(total_stim) + " total stimuli.")
-
-memorability = input("On a scale from 0 to 100, how memorable should the stimuli be? (n for none): ")
-if memorability == "n":
-    memorability = memorability
-else:
     memorability = int(memorability)
-try:
-    0 <= memorability and memorability <= 100
-except TypeError:
-    if memorability == "n":
-        pass
-    else:
-        print("Please enter a number from 0-100, or n")
-        memorability = input("On a scale from 0 to 100, how memorable should the stimuli be? (n for none): ")
-except:
-    print("Please enter an integer from 0-100, or n")
+    nameability = int(nameability)
+    emotionality = int(emotionality)
+    num_folders = int(num_folders)
+    num_stimuli = int(num_stimuli)
+    os.chdir(current_dir)
+
+    DT = pd.read_csv("full_dt_pf.csv")
+    DT_list = [DT]
+else:
+
+    #### Run if not using GUI
+
+    #### WHERE STUFF IS STORED ####
+
+    # os.chdir("/Users/sarahberger/Desktop/ObjectProject/")
+    #os.chdir("C:/Users/hanna/Documents/2019-2020/ObjectProject/")
+
+    DT = pd.read_csv("full_dt_pf.csv")
+    DT_list = [DT]
+
+    # image_directory = "/Users/sarahberger/Desktop/ObjectProject/stimuli/"
+    #image_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/stimuli/"
+
+
+    #### USER INPUTS ####
+    num_folders = input("Please indicate the number of stimulus groups you would like: ")
+    while True:
+        try:
+            int(num_folders)
+        except:
+            print("Only integers are allowed")
+            num_folders = input("Please indicate the number of stimulus groups you would like: ")
+        else:
+            break
+    print("you have entered that you would like " + str(num_folders) + " groups of stimuli")
+
+    # add except for when they want too many?
+
+    num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
+    while True:
+        try:
+            int(num_stimuli)
+        except:
+            print("Only integers are allowed")
+            num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
+        else:
+            break
+    print("you have entered that you would like " + str(num_stimuli) + " stimuli per group")
+
+    num_folders = int(num_folders)
+    num_stimuli = int(num_stimuli)
+
+    if num_stimuli * num_folders >= 1748:
+        print("You have requested too many stimuli, please try again.")
+        num_folders = input("Please indicate the number of stimulus groups you would like: ")
+        num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
+
+    num_folders = int(num_folders)
+    num_stimuli = int(num_stimuli)
+
+    total_stim = num_stimuli*num_folders
+    print("You have requested " + str(total_stim) + " total stimuli.")
+
     memorability = input("On a scale from 0 to 100, how memorable should the stimuli be? (n for none): ")
-memorability = memorability / 100
-
-nameability = input("On a scale from 0 to 100, how nameable should the stimuli be? (n for none): ")
-try:
-    0 <= nameability and nameability <= 100
-except TypeError:
-    if nameability == "n":
-        pass
+    if memorability == "n":
+        memorability = memorability
     else:
-        print("Please enter a number from 0-100, or n")
-        nameability = input("On a scale from 0 to 100, how nameable should the stimuli be? (n for none): ")
-except:
-    print("Please enter an integer from 0-100, or n")
+        memorability = int(memorability)
+    try:
+        0 <= memorability and memorability <= 100
+    except TypeError:
+        if memorability == "n":
+            pass
+        else:
+            print("Please enter a number from 0-100, or n")
+            memorability = input("On a scale from 0 to 100, how memorable should the stimuli be? (n for none): ")
+    except:
+        print("Please enter an integer from 0-100, or n")
+        memorability = input("On a scale from 0 to 100, how memorable should the stimuli be? (n for none): ")
+    memorability = memorability / 100
+
     nameability = input("On a scale from 0 to 100, how nameable should the stimuli be? (n for none): ")
-nameability = nameability / 100
+    try:
+        0 <= nameability and nameability <= 100
+    except TypeError:
+        if nameability == "n":
+            pass
+        else:
+            print("Please enter a number from 0-100, or n")
+            nameability = input("On a scale from 0 to 100, how nameable should the stimuli be? (n for none): ")
+    except:
+        print("Please enter an integer from 0-100, or n")
+        nameability = input("On a scale from 0 to 100, how nameable should the stimuli be? (n for none): ")
+    nameability = nameability / 100
 
-emotionality = input("On a scale from 0 to 100, how emotional should the stimuli be? (n for none): ")
-try:
-    0 <= emotionality and emotionality <= 100
-except TypeError:
-    if emotionality == "n":
-        pass
-    else:
-        print("Please enter a number from 0-100, or n")
-        emotionality = input("On a scale from 0 to 100, how emotional should the stimuli be? (n for none): ")
-except:
-    print("Please enter an integer from 0-100, or n")
     emotionality = input("On a scale from 0 to 100, how emotional should the stimuli be? (n for none): ")
-emotionality = emotionality / 100
+    try:
+        0 <= emotionality and emotionality <= 100
+    except TypeError:
+        if emotionality == "n":
+            pass
+        else:
+            print("Please enter a number from 0-100, or n")
+            emotionality = input("On a scale from 0 to 100, how emotional should the stimuli be? (n for none): ")
+    except:
+        print("Please enter an integer from 0-100, or n")
+        emotionality = input("On a scale from 0 to 100, how emotional should the stimuli be? (n for none): ")
+    emotionality = emotionality / 100
 
 
-print("You may specify a maximum of one of the following orientation questions:")
-print("shoebox: Is the object larger or smaller than a shoebox?")
-print("humanmade: Is the object natural or humanmade?")
-print("outdoors: Is the object typically found indoors or outdoors?")
-orientationq = input("Which of the above would you like to select? (n for none): ")
+    print("You may specify a maximum of one of the following orientation questions:")
+    print("shoebox: Is the object larger or smaller than a shoebox?")
+    print("humanmade: Is the object natural or humanmade?")
+    print("outdoors: Is the object typically found indoors or outdoors?")
+    orientationq = input("Which of the above would you like to select? (n for none): ")
 
-unique = input("Should the stimuli be very unique from each other? (y/n): ")
+    unique = input("Should the stimuli be very unique from each other? (y/n): ")
 
-target_directory = input("Please type out the target directory for the output: ")
+    target_directory = input("Please type out the target directory for the output: ")
 
-# target_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/"
-# target_directory = "/Users/sarahberger/Desktop/ObjectProject/"  # user specifies
+    # target_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/"
+    # target_directory = "/Users/sarahberger/Desktop/ObjectProject/"  # user specifies
 
 
 folder_list = []
@@ -207,9 +236,7 @@ for table in DT_list:
                                       axis=1)
             else:
                 print("all 3")
-                table['dist'] = table.apply(
-        lambda row: distance.euclidean((memorability, nameability, emotionality), [row['scaled_memory_hits'], row['scaled_name'], row['scaled_emotional']]),
-        axis=1)
+                table['dist'] = table.apply(lambda row: distance.euclidean((memorability, nameability, emotionality), [row['scaled_memory_hits'], row['scaled_name'], row['scaled_emotional']]),axis=1)
     
     
     # table['dist'] = table.apply(
@@ -369,3 +396,4 @@ outputCSV.to_csv(target_directory + "summary.csv", index = False, encoding='utf-
 
 # create the CSV with the summarized information
 # output it to the filepath!
+sys.stdout.flush()
