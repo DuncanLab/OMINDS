@@ -10,7 +10,7 @@ counterbalanced groups based on the input specifications.
 import os
 import sys
 # install packages in virtual environment. If running in Non GUI mode, comment out the line below.
-os.system('python3 -m pip install pandas scipy')
+os.system('python3 -m pip install pandas scipy --user --no-warn-script-location')
 import math
 import random
 import shutil

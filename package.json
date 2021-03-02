@@ -2,7 +2,19 @@
   "name": "object_project_desktop",
   "version": "0.1.0",
   "private": true,
-  "main": "src/main.js",
+  "main": "public/electron.js",
+  "author": "The Duncan Lab",
+  "homepage": "./",
+  "build": {
+    "appId": "com.objectproject.app",
+    "files": [
+      "build/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
+  },
   "dependencies": {
     "@material-ui/core": "^4.11.0",
     "@material-ui/icons": "^4.9.1",
@@ -10,22 +22,28 @@
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "browserify-fs": "^1.0.0",
+    "concurrently": "^6.0.0",
     "custom-electron-titlebar": "^3.2.6",
-    "electron": "^9.1.0",
+    "electron-is-dev": "^2.0.0",
+    "electron-squirrel-startup": "^1.0.0",
     "fontsource-roboto": "^4.0.0",
     "frameless-titlebar": "^2.1.4",
     "material-icons": "^0.3.1",
     "python-shell": "^2.0.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.1"
+    "react-scripts": "3.4.1",
+    "wait-on": "^5.2.1"
   },
   "scripts": {
     "electron-start": "electron .",
-    "start": "react-scripts start",
+    "electron-pack": "build --em.main=build/electron.js",
+    "start": "electron-forge start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -43,6 +61,39 @@
     ]
   },
   "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.54",
+    "@electron-forge/maker-deb": "^6.0.0-beta.54",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
+    "@electron-forge/maker-zip": "^6.0.0-beta.54",
+    "electron": "^9.1.0",
     "ws": "3.3.2"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "object_project_desktop"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
   }
 }
