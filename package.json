@@ -38,6 +38,7 @@
   "scripts": {
     "electron-start": "electron .",
     "electron-pack": "build --em.main=build/electron.js",
+    "start-local": "react-scripts start",
     "start": "electron-forge start",
     "build": "react-scripts build",
     "test": "react-scripts test",
