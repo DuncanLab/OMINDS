@@ -32,6 +32,7 @@ if(sys.argv[1]):
     orientationq = sys.argv[8]
     unique = sys.argv[9]
     target_directory = sys.argv[10]
+    newname = sys.argv[11]
 
     memorability = int(memorability)
     nameability = int(nameability)
@@ -44,19 +45,8 @@ if(sys.argv[1]):
     DT_list = [DT]
 else:
 
-    #### Run if not using GUI
-
-    #### WHERE STUFF IS STORED ####
-
-    # os.chdir("/Users/sarahberger/Desktop/ObjectProject/")
-    #os.chdir("C:/Users/hanna/Documents/2019-2020/ObjectProject/")
-
     DT = pd.read_csv("full_dt_pf.csv")
     DT_list = [DT]
-
-    # image_directory = "/Users/sarahberger/Desktop/ObjectProject/stimuli/"
-    #image_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/stimuli/"
-
 
     #### USER INPUTS ####
     num_folders = input("Please indicate the number of stimulus groups you would like: ")
@@ -70,7 +60,7 @@ else:
             break
     print("you have entered that you would like " + str(num_folders) + " groups of stimuli")
 
-    # add except for when they want too many?
+    # TODO: add except for when they want too many
 
     num_stimuli = input("Please indicate the number of stimuli you would like per group: ")
     while True:
@@ -154,10 +144,6 @@ else:
 
     target_directory = input("Please type out the target directory for the output: ")
 
-    # target_directory = "C:/Users/hanna/Documents/2019-2020/ObjectProject/"
-    # target_directory = "/Users/sarahberger/Desktop/ObjectProject/"  # user specifies
-
-
 folder_list = []
 total_stim = num_folders * num_stimuli
 
@@ -166,13 +152,8 @@ for folder in range(num_folders):
 
 ############################### STEP 1: ORIENTATION Q SPLITTING #######################################
 
-# if shoebox == True or outdoors == True or manmade == True:
-# figure out which one was selected -> use that column
-
-# lowtable = items in DT that have a value below 0.2
-# hightable = items in DT that have a value above 0.8
-
-# DT_list = [lowtable, hightable]
+# If any of the orientation questions are selected, use the column to split the data.
+# We will have to calculate the distance separately for low and high scores.
 
 if orientationq == "shoebox":
     lowtable = DT.loc[DT['shoebox_response'] == 'larger than a shoebox']
@@ -189,10 +170,12 @@ elif orientationq == "outdoors":
     hightable = DT.loc[DT['outdoors_response'] == 'outdoors']
     DT_list = [lowtable, hightable]
 
-# for table in DT_list:
 for table in DT_list:
+    
     ########################## STEP 2: DIFFERENCE SCORE ##########################
     # goldstandard = (memscore, namscore, emoscore)
+    # The smaller dist is, the closer it is to the ideal parameters.
+
     
     if memorability == 'n':
         if nameability == 'n':
@@ -237,23 +220,6 @@ for table in DT_list:
             else:
                 print("all 3")
                 table['dist'] = table.apply(lambda row: distance.euclidean((memorability, nameability, emotionality), [row['scaled_memory_hits'], row['scaled_name'], row['scaled_emotional']]),axis=1)
-    
-    
-    # table['dist'] = table.apply(
-        # lambda row: distance.euclidean(goldstandard, [row['scaled_memory_hits'], row['scaled_name'], row['scaled_emotional']]),
-        # axis=1) #this one works
-
-    #worry about if they only second 1 or 2 options later
-
-    # for stim in DT:
-    # stimscore = (memscore, namscore, emoscore)
-    # stimdist = distance.euclidean(goldstandard, stimscore)
-    # add it to a column? "dist"
-
-    # the smaller dist is, the closer it is to the ideal parameters
-
-    # if we want to upweight memorability, we can scale the memorability score by some factor --> changes how far away it is
-    # make sure we do that for the goldstandard so it's the same scale
 
     ######################### STEP 3: UNIQUENESS TRIMMING ##############################
 
@@ -271,38 +237,12 @@ for table in DT_list:
 
         table = newtable
 
-    #test if this works after we do the 0 and 1 in a column thing
-
-        #in dataframe we load in, add a column that says if the modal name is unique or not
-
-    # if uniqueness: # elim all responses that are worse than the others of the same modal name
-    # newtable = empty datatable?
-    # # take column "modalname"
-    # uniquemodalname = []
-    # for name in uniquemodalname:
-    # new datatable with the rows that have this modal name
-    # arrange by dist
-    # take the first row (lowest score)
-    # add that row to the newtable
-
-    # if uniqueness:
-    # table = newtable
-
     ############################# STEP 4: CUT TO PREFERRED SIZE ##################################
 
+    # round up, in case there are an odd number of stimuli. This will be cut later.
     table = table.sort_values(['dist'], ascending=[True])
-
-    cutoff = math.ceil(num_stimuli/len(DT_list)) * num_folders # items in table
-
+    cutoff = math.ceil(num_stimuli/len(DT_list)) * num_folders 
     table = table.iloc[0:cutoff]
-
-    # if we're using the dist score for this -->
-    # organize table by dist
-    # take N / len(DT_list) number of lowest dist scores, rounding up
-    # alternatively, if they want something weird like 5 folders of 7 images, dividing by shoebox,
-    # we can take num_folders * num_stimuli / len(DT_list) number of stimuli, rounding up
-    # we tried to do math :')
-    # make sure this works for larger numbers of stimuli per folder
 
     ############################ STEP 5: FOLDER ALLOCATION ################################
 
@@ -318,33 +258,21 @@ for table in DT_list:
         targ_folder = shuffled_list[i]
         folder_list[targ_folder] = folder_list[targ_folder].append(stim_row)
 
-
-
-
-    # NOT randomize the rows (so organized by memorability unless otherwise specified)
-
-    # for folder in folder_list:
-    # grab num_stimuli / len(DT_list) number of rows, rounding up
-    # rbind, basically
-
 ###################### STEP 6: DOUBLE CHECK ###########################
+# If there are an odd number of requested stimuli, but an even number of stimuli in the folder, cut the worst-fitting item.
 
-if num_stimuli % 2 ==1:
+if num_stimuli % 2 == 1:
     for folder in folder_list:
         folder.sort_values(['dist'], ascending=[True]) #or memorability
         folder = folder.iloc[0:num_stimuli]
 
-
-# if num_stimuli % 2 == 1:
-# for folder in folder_list:
-# organize by distance/memorability
-# remove the one with the worst dist score (if odd)
-
 #################### STEP 7: FOLDERS #####################
 
+# create folders
 for folderpos in range(len(folder_list)):
     folder = folder_list[folderpos]
     folder.index = range(len(folder.index))
+    foldernumber = str(folderpos)
     folderletter = chr(65 + folderpos)
 
     folderpath = target_directory + folderletter + '/'
@@ -354,29 +282,25 @@ for folderpos in range(len(folder_list)):
     folder['newname'] = folder.apply(lambda _: '', axis=1)
 
     for stimpos in range(len(folder)):
-        stimrow= folder.iloc[stimpos]
+        
+        stimrow = folder.iloc[stimpos]
 
-        newname = folderletter + "/" + str(stimpos) + ".jpg"
-        #folder.loc[stimrow, 'newname'] = newname
+        # If they want it re-named, change to numbers beginning at index 1.
+        if newname == 1:
+            newname = folderletter + "/" + str(stimpos + 1) + ".jpg" 
+        else:
+            oldname = folder.loc[stimpos, 'stimulus']
+            newname = folderletter + "/" + str(oldname)
+        
+        # Record this in the output file in a new column
         folder.loc[stimpos,'newname'] = newname
-        #folder[stimpos, 'newname'] = folder.apply(lambda row: str(newname), axis = 1)
 
+        # Copy the image from the stored folder
         itempath = image_directory + folder.loc[stimpos, 'stimulus']
         targpath = target_directory + newname
-
         shutil.copy(itempath, targpath)
 
 
-
-
-
-
-# for folder in folder_list:
-# for stimnum in folder:
-# grab the stimulus (from our database, by its original name)
-# make new name --> [folderletter] + "/" + [stimnumber] + ".jpg"
-# add the new name to a column (for the summary CSV)
-# move it to a new folder -> filepath + "/" + newname
 
 #################### STEP 8: SUMMARIZED CSV ##########################
 
@@ -386,14 +310,5 @@ for folder in folder_list:
     outputCSV = outputCSV.append(folder)
 
 outputCSV.to_csv(target_directory + "summary.csv", index = False, encoding='utf-8')
-# outputCSV = empty datatable?
 
-# for folder in folder_list:
-# create a new column called folder
-# rbind it to outputCSV
-# make sure it has all the stats we want to give them!!
-# also stimulus filename
-
-# create the CSV with the summarized information
-# output it to the filepath!
 sys.stdout.flush()
