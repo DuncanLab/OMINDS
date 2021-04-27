@@ -43,8 +43,16 @@ if(sys.argv[1]):
     total_stim = num_folders * num_stimuli
 else:
     print('Please use the app!')
-    
+
 ######################################################################################################
+
+def assert_exit(num_possible):
+    try:
+        assert total_stim <= num_requested
+    except AssertionError:
+        err_message = 'Too many stimuli requested given the parameters. Asked for ' + \
+        str(total_stim) + ' but the maximum number of possible stimuli is ' str(num_possible)  
+        sys.exit(err_message)
 
 folder_list = []
 
@@ -107,8 +115,7 @@ df = df.sort_values(by='dist', ascending=True)
 
 # if unique was selected, only keep the items with the best score for each modal name
 if unique == "y":
-    assert total_stim <= 1174, 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is 1174'  
+    assert_exit(num_possible = 1174)
     # separate unique and non-unique values
     nonunique = df.loc[df['unique'] == 0]
     newtable = df.loc[df['unique'] == 1]
@@ -122,8 +129,7 @@ if unique == "y":
 
     df = newtable
 else:
-    assert total_stim <= 1748, 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is 1748'  
+    assert_exit(num_possible = 1748)
 
 
 ############################### STEP 3: ORIENTATION Q SPLITTING #######################################
@@ -133,20 +139,17 @@ else:
 if orientationq == "shoebox":
     lowtable = df.loc[df['shoebox_response'] == 'larger than a shoebox']
     hightable = df.loc[df['shoebox_response'] == 'smaller than a shoebox']
-    assert total_stim <= len(hightable)*2, 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is ' + str(len(hightable)*2)
+    assert_exit(len(hightable)*2)
     df_list = [lowtable, hightable]
 elif orientationq == "humanmade":
     lowtable = df.loc[df['humanmade_response'] == 'natural']
     hightable = df.loc[df['humanmade_response'] == 'human-made']
-    assert total_stim <= len(lowtable)*2, 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is ' + str(len(lowtable)*2) 
+    assert_exit(len(lowtable)*2)
     df_list = [lowtable, hightable]
 elif orientationq == "outdoors":
     lowtable = df.loc[df['outdoors_response'] == 'indoors']
     hightable = df.loc[df['outdoors_response'] == 'outdoors']
-    assert total_stim <= len(hightable)*2, 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is ' + str(len(hightable)*2)
+    assert_exit(len(hightable)*2)
     df_list = [lowtable, hightable]
 else:
     df_list = [df]
