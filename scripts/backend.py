@@ -51,7 +51,7 @@ def assert_exit(num_possible):
         assert total_stim <= num_requested
     except AssertionError:
         err_message = 'Too many stimuli requested given the parameters. Asked for ' + \
-        str(total_stim) + ' but the maximum number of possible stimuli is ' str(num_possible)  
+        str(total_stim) + ' but the maximum number of possible stimuli is ' + str(num_possible)  
         sys.exit(err_message)
 
 folder_list = []
