@@ -40,7 +40,7 @@ if(sys.argv[1]):
     os.chdir(current_dir)
 
     df = pd.read_csv("full_dt_pf.csv")
-    df_list = [df]
+    total_stim = num_folders * num_stimuli
 else:
     print('Please use the app!')
     
