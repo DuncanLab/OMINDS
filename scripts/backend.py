@@ -48,7 +48,7 @@ else:
 
 def assert_exit(num_possible):
     try:
-        assert total_stim <= num_requested
+        assert total_stim <= num_possible
     except AssertionError:
         err_message = 'Too many stimuli requested given the parameters. Asked for ' + \
         str(total_stim) + ' but the maximum number of possible stimuli is ' + str(num_possible)  
