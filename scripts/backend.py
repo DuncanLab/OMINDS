@@ -8,7 +8,7 @@ stimuli based on the specified parameters.
 import os
 import sys
 # install packages in virtual environment. If running in Non GUI mode, comment out the line below.
-os.system('python3 -m pip install pandas scipy --user --no-warn-script-location')
+# os.system('python3 -m pip install pandas scipy --user --no-warn-script-location')
 import math
 import random
 import shutil
@@ -32,13 +32,16 @@ if(sys.argv[1]):
     target_directory = sys.argv[10]
     newname = sys.argv[11]
 
-    memorability = int(memorability)
-    nameability = int(nameability)
-    emotionality = int(emotionality)
+    if(memorability != 'n'):
+        memorability = int(memorability)
+    if(nameability != 'n'):
+        nameability = int(nameability)
+    if(emotionality != 'n'):
+        emotionality = int(emotionality)
+    newname = int(newname)
     num_folders = int(num_folders)
     num_stimuli = int(num_stimuli)
     os.chdir(current_dir)
-
     df = pd.read_csv("full_dt_pf.csv")
     total_stim = num_folders * num_stimuli
 else:
@@ -200,7 +203,8 @@ for i in range(num_folders):
     folder.index = range(len(folder.index))
     foldernumber = str(i + 1) # begin indexing at 1
 
-    folderpath = target_directory + foldernumber + '/'
+    folderpath = target_directory + foldernumber + "/"
+
     if not os.path.exists(folderpath):
         os.makedirs(folderpath)
 
@@ -212,17 +216,16 @@ for i in range(num_folders):
 
         # If they want it re-named, change to numbers beginning at index 1.
         if newname == 1:
-            changedname = foldernumber + "/" + str(j + 1) + ".jpg" 
+            changedname = foldernumber + "_" + str(j + 1) + ".jpg" 
         else:
-            changedname = foldernumber + "/" + stimname
+            changedname = foldernumber + "_" + stimname
         
         # Record this in the output file in a new column
         folder.loc[j,'newname'] = changedname
 
         # Copy the image from the stored folder
-        itempath = image_directory + "/" + stimname
-        targpath = image_directory + "/" + changedname
-            
+        itempath = image_directory + stimname
+        targpath = folderpath + changedname
         # move it over
         shutil.copy(itempath, targpath)
 

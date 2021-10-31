@@ -34,9 +34,14 @@ if(sys.argv[1]):
     target_directory = sys.argv[10]
     newname = sys.argv[11]
 
-    memorability = int(memorability)
-    nameability = int(nameability)
-    emotionality = int(emotionality)
+    print(newname)
+
+    if(memorability != 'n'):
+        memorability = int(memorability)
+    if(nameability != 'n'):
+        nameability = int(nameability)
+    if(emotionality != 'n'):
+        emotionality = int(emotionality)
     num_folders = int(num_folders)
     num_stimuli = int(num_stimuli)
     os.chdir(current_dir)

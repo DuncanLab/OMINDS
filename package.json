@@ -1,5 +1,5 @@
 {
-  "name": "object_project_desktop",
+  "name": "o-minds",
   "version": "0.1.0",
   "private": true,
   "main": "public/electron.js",
@@ -16,24 +16,27 @@
     }
   },
   "dependencies": {
-    "@material-ui/core": "^4.11.0",
-    "@material-ui/icons": "^4.9.1",
+    "@material-ui/core": "^4.12.3",
+    "@material-ui/icons": "^4.11.2",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "browserify-fs": "^1.0.0",
-    "concurrently": "^6.0.0",
-    "custom-electron-titlebar": "^3.2.6",
+    "concurrently": "^6.2.1",
+    "csv": "^5.5.3",
+    "custom-electron-titlebar": "^3.2.7",
+    "danfojs-node": "^0.3.0",
+    "dataframe-js": "^1.4.4",
     "electron-is-dev": "^2.0.0",
     "electron-squirrel-startup": "^1.0.0",
     "fontsource-roboto": "^4.0.0",
     "frameless-titlebar": "^2.1.4",
     "material-icons": "^0.3.1",
-    "python-shell": "^2.0.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
+    "python-shell": "^2.0.3",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
     "react-scripts": "3.4.1",
-    "wait-on": "^5.2.1"
+    "wait-on": "^5.3.0"
   },
   "scripts": {
     "electron-start": "electron .",
@@ -62,12 +65,13 @@
     ]
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.54",
-    "@electron-forge/maker-deb": "^6.0.0-beta.54",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
-    "@electron-forge/maker-zip": "^6.0.0-beta.54",
-    "electron": "^9.1.0",
+    "@electron-forge/cli": "^6.0.0-beta.59",
+    "@electron-forge/maker-deb": "^6.0.0-beta.59",
+    "@electron-forge/maker-dmg": "^6.0.0-beta.59",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.59",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.59",
+    "@electron-forge/maker-zip": "^6.0.0-beta.59",
+    "electron": "^9.4.4",
     "ws": "3.3.2"
   },
   "config": {
@@ -75,24 +79,10 @@
       "packagerConfig": {},
       "makers": [
         {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "object_project_desktop"
-          }
-        },
-        {
           "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
+          "config": {
+            "name": "O-MINDS"
+          }
         }
       ]
     }
