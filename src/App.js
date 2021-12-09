@@ -26,6 +26,8 @@ import Snackbar from "@material-ui/core/Snackbar";
 import IconButton from "@material-ui/core/IconButton";
 import CloseIcon from "@material-ui/icons/Close";
 
+import Logo from './logos/ominds_2long.png'
+
 const electron = window.require("electron");
 const remote = electron.remote;
 const { ipcRenderer } = window.require("electron");
@@ -306,7 +308,7 @@ function App() {
       <div>
         {/* <HeaderComponent/> */}
 
-        <div style={{ textAlign: "center", marginTop: 60, marginBottom: 60 }}>
+        <div style={{ textAlign: "center", marginTop: 60, marginBottom: 0 }}>
           <Typography
             variant="overline"
             style={{ position: "relative", fontSize: 15, opacity: 0.6 }}
@@ -318,7 +320,7 @@ function App() {
               fontWeight="fontWeightLight"
               style={{ position: "relative", fontSize: 60 }}
             >
-              O-MINDS
+              <img src={Logo} alt="" width="400" />
             </Box>
           </Typography>
         </div>

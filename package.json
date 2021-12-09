@@ -25,12 +25,12 @@
     "concurrently": "^6.2.1",
     "csv": "^5.5.3",
     "custom-electron-titlebar": "^3.2.7",
-    "danfojs-node": "^0.3.0",
     "dataframe-js": "^1.4.4",
     "electron-is-dev": "^2.0.0",
     "electron-squirrel-startup": "^1.0.0",
     "fontsource-roboto": "^4.0.0",
     "frameless-titlebar": "^2.1.4",
+    "lodash": "^4.17.21",
     "material-icons": "^0.3.1",
     "python-shell": "^2.0.3",
     "react": "^16.14.0",
@@ -71,7 +71,7 @@
     "@electron-forge/maker-rpm": "^6.0.0-beta.59",
     "@electron-forge/maker-squirrel": "^6.0.0-beta.59",
     "@electron-forge/maker-zip": "^6.0.0-beta.59",
-    "electron": "^9.4.4",
+    "electron": "^11.0.1",
     "ws": "3.3.2"
   },
   "config": {
@@ -80,6 +80,7 @@
       "makers": [
         {
           "name": "@electron-forge/maker-zip",
+          "platforms": ["darwin", "linux"],
           "config": {
             "name": "O-MINDS"
           }

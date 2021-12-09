@@ -1,3 +1,6 @@
+// OUTDATED
+
+
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const url = require("url");
 const path = require("path");
@@ -20,6 +23,7 @@ let unique = null;
 // no menu bar required
 // Menu.setApplicationMenu(null)
 
+console.log("icon", path.join(__static, 'logos/ominds_2.png') )
 function createWindow() {
   // test function
 
@@ -40,6 +44,7 @@ function createWindow() {
       // contextIsolation: true,
       // sandbox: true
     },
+    icon: path.join(__static, 'logos/ominds_2.png') 
   });
 
   // let pyshell = new PythonShell('../scripts/test_file.py');
