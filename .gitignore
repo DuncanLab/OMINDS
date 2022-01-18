@@ -6,3 +6,5 @@ dist/
 background_tasks/
 .vscode
 results/
+
+current_builds/
