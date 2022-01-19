@@ -233,13 +233,22 @@ function App() {
   const handleDirSelect = (event) => {
     // wait for the directory open window to open. This needs fixing,
     // need to send back confirmation of dir selection
-    setTimeout(function () {
-      setDirSet(true);
-    }, 2000);
+    // setTimeout(function () {
+    //   setDirSet(true);
+    // }, 2000);
     console.log("Click");
-    window.postMessage({
-      type: "select-dirs",
-    });
+    let dirSelected = ipcRenderer.sendSync("select-dirs", {
+
+    })
+    console.log("directory selection response", dirSelected);
+      if (dirSelected[0] === "success") {
+        setDirSet(true);
+      } else {
+        setDirSet(false);
+      }
+    // window.postMessage({
+    //   type: "select-dirs",
+    // });
   };
 
   const hitSubmit = () => {

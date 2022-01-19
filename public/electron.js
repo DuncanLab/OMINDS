@@ -9,6 +9,8 @@ const fs = require("fs");
 const assert = require("assert");
 const parse = require("csv-parse/lib/es5/sync");
 
+const ObjectsToCsv = require('objects-to-csv');
+
 // Load the full build.
 var _ = require('lodash');
 
@@ -146,11 +148,29 @@ app.on("window-all-closed", () => {
 
 // grab directory to offload images onto
 ipcMain.on("select-dirs", async (event, arg) => {
-  const result = await dialog.showOpenDialog(win, {
-    properties: ["openDirectory"],
-  });
-  dirSelected = result.filePaths[0] + "/";
+  console.log("Trying to select a directory")
+  dialog.showOpenDialog(win, {
+    properties: ['openDirectory']
+  }).then(result => {
+    console.log("result", result)
+    if(result.canceled){
+      console.log("File Selection Canceled.")
+      event.returnValue = ["failure"];
+    } else {
+      event.returnValue = ["success"];
+    }
+    console.log(result.filePaths)
+    dirSelected = result.filePaths[0] + "/";
   console.log("directories selected", dirSelected);
+  }).catch(err => {
+    console.log(err)
+    event.returnValue = ["failure"];
+  })
+
+  // const result = await dialog.showOpenDialog(win, {
+  //   properties: ["openDirectory"],
+  // });
+  
 });
 
 // once data is submitted, run the python function
@@ -629,6 +649,20 @@ console.log("folder list final", folder_list)
 
 }
 
+async function step_eight(){
+  // Create an output CSV with chosen images.
+
+  // use flattened folder_list and save to chosen directory
+
+  const csv = new ObjectsToCsv(folder_list.flat());
+  console.log("flat folder", folder_list.flat())
+  // Save to file:
+  await csv.toDisk(dirSelected + 'objects.csv');
+ 
+  // Return the CSV file as string:
+  console.log("CSV", await csv.toString());
+}
+
 // run promise chain for backend function in scope
 
 step_one_promise
@@ -637,6 +671,7 @@ step_one_promise
   .then(step_four)
   .then(step_six)
   .then(step_seven)
+  .then(step_eight)
   .catch(err => { console.log(err) });
 
 

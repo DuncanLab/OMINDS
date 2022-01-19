@@ -1,18 +1,30 @@
 {
-  "name": "o-minds",
-  "version": "0.1.0",
+  "name": "O-MINDS",
+  "version": "0.1.1",
   "private": true,
   "main": "public/electron.js",
   "author": "The Duncan Lab",
   "homepage": "./",
   "build": {
     "appId": "com.objectproject.app",
-    "files": [
-      "build/**/*",
-      "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "assets"
+    "icon": "build/",
+    "mac": {
+      "category": "your.app.category.type",
+      "target": [
+        {
+          "target": "default",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": "portable"
+    },
+    "linux": {
+      "target": "AppImage"
     }
   },
   "dependencies": {
@@ -32,6 +44,7 @@
     "frameless-titlebar": "^2.1.4",
     "lodash": "^4.17.21",
     "material-icons": "^0.3.1",
+    "objects-to-csv": "^1.3.6",
     "python-shell": "^2.0.3",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
@@ -41,13 +54,13 @@
   "scripts": {
     "electron-start": "electron .",
     "electron-pack": "build --em.main=build/electron.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist-all": "electron-builder -mwl",
     "start-local": "react-scripts start",
-    "start": "electron-forge start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -65,27 +78,8 @@
     ]
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.59",
-    "@electron-forge/maker-deb": "^6.0.0-beta.59",
-    "@electron-forge/maker-dmg": "^6.0.0-beta.59",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.59",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.59",
-    "@electron-forge/maker-zip": "^6.0.0-beta.59",
     "electron": "^11.0.1",
+    "electron-builder": "^22.14.5",
     "ws": "3.3.2"
-  },
-  "config": {
-    "forge": {
-      "packagerConfig": {},
-      "makers": [
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": ["darwin", "linux"],
-          "config": {
-            "name": "O-MINDS"
-          }
-        }
-      ]
-    }
   }
 }
