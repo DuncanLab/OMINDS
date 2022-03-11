@@ -3,3 +3,8 @@ out/
 build/
 dist/
 .DS_Store
+background_tasks/
+.vscode
+results/
+
+current_builds/

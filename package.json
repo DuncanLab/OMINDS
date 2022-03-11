@@ -1,50 +1,66 @@
 {
-  "name": "object_project_desktop",
-  "version": "0.1.0",
+  "name": "O-MINDS",
+  "version": "0.1.2",
   "private": true,
   "main": "public/electron.js",
   "author": "The Duncan Lab",
   "homepage": "./",
   "build": {
     "appId": "com.objectproject.app",
-    "files": [
-      "build/**/*",
-      "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "assets"
+    "icon": "build/icon.png",
+    "mac": {
+      "category": "your.app.category.type",
+      "target": [
+        {
+          "target": "default",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": "portable"
+    },
+    "linux": {
+      "target": "AppImage"
     }
   },
   "dependencies": {
-    "@material-ui/core": "^4.11.0",
-    "@material-ui/icons": "^4.9.1",
+    "@material-ui/core": "^4.12.3",
+    "@material-ui/icons": "^4.11.2",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "browserify-fs": "^1.0.0",
-    "concurrently": "^6.0.0",
-    "custom-electron-titlebar": "^3.2.6",
+    "concurrently": "^6.2.1",
+    "csv": "^5.5.3",
+    "custom-electron-titlebar": "^3.2.7",
+    "dataframe-js": "^1.4.4",
     "electron-is-dev": "^2.0.0",
     "electron-squirrel-startup": "^1.0.0",
     "fontsource-roboto": "^4.0.0",
     "frameless-titlebar": "^2.1.4",
+    "lodash": "^4.17.21",
     "material-icons": "^0.3.1",
-    "python-shell": "^2.0.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
+    "objects-to-csv": "^1.3.6",
+    "python-shell": "^2.0.3",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
     "react-scripts": "3.4.1",
-    "wait-on": "^5.2.1"
+    "wait-on": "^5.3.0"
   },
   "scripts": {
     "electron-start": "electron .",
     "electron-pack": "build --em.main=build/electron.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist-all": "electron-builder -m",
     "start-local": "react-scripts start",
-    "start": "electron-forge start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -62,39 +78,8 @@
     ]
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.54",
-    "@electron-forge/maker-deb": "^6.0.0-beta.54",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
-    "@electron-forge/maker-zip": "^6.0.0-beta.54",
-    "electron": "^9.1.0",
+    "electron": "^11.0.1",
+    "electron-builder": "^22.14.5",
     "ws": "3.3.2"
-  },
-  "config": {
-    "forge": {
-      "packagerConfig": {},
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "object_project_desktop"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
   }
 }
