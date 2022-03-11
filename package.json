@@ -1,13 +1,13 @@
 {
   "name": "O-MINDS",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "main": "public/electron.js",
   "author": "The Duncan Lab",
   "homepage": "./",
   "build": {
     "appId": "com.objectproject.app",
-    "icon": "build/",
+    "icon": "build/icon.png",
     "mac": {
       "category": "your.app.category.type",
       "target": [
@@ -56,7 +56,7 @@
     "electron-pack": "build --em.main=build/electron.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist-all": "electron-builder -mwl",
+    "dist-all": "electron-builder -m",
     "start-local": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

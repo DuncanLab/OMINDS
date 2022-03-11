@@ -176,14 +176,38 @@ ipcMain.on("select-dirs", async (event, arg) => {
 // once data is submitted, run the python function
 
 ipcMain.on("submitted", (event, arg) => {
+
+  // backend(
+    //   "/Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/",
+    //   "/Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/scripts/objects/",
+    //   3,
+    //   12,
+    //   "75",
+    //   "20",
+    //   "50",
+    //   "shoebox",
+    //   1,
+    //   "/Users/alexgordienko/Desktop",
+    //   1
+    // );
   console.log("recieved inputs");
+  // console.log(arg); // prints "ping"
+  // num_folders = 6;
+  // num_stimuli = 40;
+  // orientationq = "shoebox";
+  // memorability = 75;
+  // nameability = 20;
+  // emotionality = 50;
+  // unique = 1;
+  // renamed = 1;
+
   console.log(arg); // prints "ping"
   num_folders = Number(arg.groups);
   num_stimuli = Number(arg.images);
   orientationq = arg.orientation;
-  memorability = arg.checkedMemorable ? Number(arg.sliderA) : "n";
-  nameability = arg.checkedMemorable ? Number(arg.sliderB) : "n";
-  emotionality = arg.checkedMemorable ? Number(arg.sliderC) : "n";
+  memorability = arg.checkedMemorable ? "n" : Number(arg.sliderA);
+  nameability = arg.checkedMemorable ?  "n" : Number(arg.sliderB);
+  emotionality = arg.checkedMemorable ? "n" : Number(arg.sliderC);
   unique = arg.checkedUnique ? 1 : 0;
   renamed = arg.checkedRenamed ? 1 : 0;
 
@@ -207,7 +231,7 @@ ipcMain.on("submitted", (event, arg) => {
       renamed,
     ],
   };
-  console.log(options.args);
+  console.log("Submitted Options", options.args);
 
   
 
@@ -223,6 +247,7 @@ ipcMain.on("submitted", (event, arg) => {
       orientationq,
       unique,
       dirSelected,
+      // "/Users/alexgordienko/Desktop/",
       renamed
     );
     resolve("run backend")
@@ -274,21 +299,23 @@ let records = parse(csvString, {
 // backend(
 //   "/Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/",
 //   "/Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/scripts/objects/",
-//   2,
 //   3,
-//   "n",
-//   "n",
-//   "n",
+//   12,
+//   "75",
+//   "20",
+//   "50",
 //   "shoebox",
 //   1,
-//   "/Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/results/",
+//   "/Users/alexgordienko/Desktop/",
 //   1
 // );
 
 function eucDistance(a, b) {
   // ensure type of both arrays
-  let array1 = a.split(",").map(Number);
-  let array2 = b.split(",").map(Number);
+  // console.log("input array a: ", a)
+  // console.log("input array b: ", b)
+  let array1 = a.map(Number);
+  let array2 = b.map(Number);
   return (
     array1
       .map((x, i) => Math.abs(x - array2[i]) ** 2) // square the difference
@@ -463,12 +490,12 @@ function create2DArray(len){
     }
 
     // Combine arrays back into records and sort again. 
-    console.log(unique.length, modalresponses.length, unique.length+modalresponses.length)
+    // console.log(unique.length, modalresponses.length, unique.length+modalresponses.length)
     records = unique.concat(modalresponses)
     records.sort(function (a, b) {
       return a.dist - b.dist;
     });
-    console.log(records.length)
+    // console.log(records.length)
     // console.log(map)
     // console.log(modalresponses.length)
     }
@@ -515,7 +542,7 @@ function create2DArray(len){
     // do not split
     df_list = [df]
   }
-console.log(df_list.length)
+// console.log(df_list.length)
 
 
   }
@@ -526,14 +553,14 @@ let shuffled_list = []
 function step_four() {
   for (let list of df_list) {
 
-    console.log("list", list.length)
+    // console.log("list", list.length)
     
     // STEP 4: CUT TO PREFERRED SIZE
     let cutoff = Math.ceil(num_stimuli*num_folders/df_list.length)
-    console.log("cutoff", cutoff)
+    // console.log("cutoff", cutoff)
   
     let cutlist = list.slice(0, (cutoff))
-    console.log("cutlist", cutlist.length)
+    // console.log("cutlist", cutlist.length)
   
     // STEP 5: FOLDER ALLOCATION
   
@@ -550,7 +577,7 @@ function step_four() {
   
     // if there's no leftovers after dividing into folders, then it's no problem
     for(let a = 0; a < cutoff; a ++){
-      console.log("a", a)
+      // console.log("a", a)
       if(a < Math.floor((cutlist.length/num_folders))*num_folders){
         let stim_row = list[a]
         let targ_folder = _.flattenDeep(shuffled_list)[a]
@@ -566,8 +593,8 @@ function step_four() {
 
 function step_six(){
   // console.log("shuffled_list", shuffled_list)
-console.log("folder_list", folder_list.length)
-console.log("leftovers", leftovers.length)
+// console.log("folder_list", folder_list.length)
+// console.log("leftovers", leftovers.length)
 
 // STEP 6: DOUBLE CHECK
 
@@ -578,14 +605,14 @@ if (leftovers.length !== 0 ){
   leftovers = _.shuffle(leftovers)
 
   for(let b = 0; b < num_folders; b++){
-    console.log("folder list b", folder_list[b])
+    // console.log("folder list b", folder_list[b])
     // folder_list[b] = folder_list[b].push(leftovers[b])
     folder_list[b].push(leftovers[b])
-    console.log("leftovers b", leftovers[b])
+    // console.log("leftovers b", leftovers[b])
   }
 }
 
-console.log("After leftovers folder_list", folder_list.length)
+// console.log("After leftovers folder_list", folder_list.length)
 }
 
 function step_seven(){
@@ -596,7 +623,7 @@ function step_seven(){
 for (let c = 0; c < num_folders; c++){
   // folder_list[c] = _.shuffle(folder_list[c])
   let folder = _.shuffle(folder_list[c])
-  console.log("folder final", folder)
+  // console.log("folder final", folder)
 
   let folder_number = String(c + 1) // begin indexing at 1
 
@@ -627,7 +654,7 @@ for (let c = 0; c < num_folders; c++){
         if (err) {
             return console.error(err);
         }
-        console.log('Image moved successfully!');
+        // console.log('Image moved successfully!');
     })
     } else {
       let assignedName = folder[d].stimulus
@@ -639,13 +666,13 @@ for (let c = 0; c < num_folders; c++){
         if (err) {
             return console.error(err);
         }
-        console.log('Image moved successfully!');
+        // console.log('Image moved successfully!');
     })
     }
   }
   
 }
-console.log("folder list final", folder_list)
+// console.log("folder list final", folder_list)
 
 }
 
@@ -655,12 +682,12 @@ async function step_eight(){
   // use flattened folder_list and save to chosen directory
 
   const csv = new ObjectsToCsv(folder_list.flat());
-  console.log("flat folder", folder_list.flat())
+  // console.log("flat folder", folder_list.flat())
   // Save to file:
   await csv.toDisk(dirSelected + 'objects.csv');
  
   // Return the CSV file as string:
-  console.log("CSV", await csv.toString());
+  // console.log("CSV", await csv.toString());
 }
 
 // run promise chain for backend function in scope
