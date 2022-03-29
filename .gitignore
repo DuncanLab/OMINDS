@@ -8,3 +8,7 @@ background_tasks/
 results/
 
 current_builds/
+
+scripts/parity_testing/python_output/
+scripts/parity_testing/js_output/
+
