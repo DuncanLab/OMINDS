@@ -1,6 +1,7 @@
 {
   "name": "O-MINDS",
-  "version": "0.1.2",
+  "version": "0.1.4",
+  "description": "OMINDS is a native application that helps you create robust image sets for your experiments.",
   "private": true,
   "main": "public/electron.js",
   "author": "The Duncan Lab",
