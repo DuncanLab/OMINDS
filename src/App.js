@@ -129,9 +129,9 @@ function App() {
   const [checkedMemorable, setMemorableUnique] = React.useState(false);
   const [checkedNameable, setNameableUnique] = React.useState(false);
   const [checkedEmotional, setEmotionalUnique] = React.useState(false);
-  const [sliderA, setSliderA] = React.useState(50);
-  const [sliderB, setSliderB] = React.useState(50);
-  const [sliderC, setSliderC] = React.useState(50);
+  const [sliderA, setSliderA] = React.useState(0.50);
+  const [sliderB, setSliderB] = React.useState(0.50);
+  const [sliderC, setSliderC] = React.useState(0.50);
   const [checkedUnique, setCheckedUnique] = React.useState(false);
   const [checkedRenamed, setCheckedRenamed] = React.useState(true);
   const [open, setOpen] = React.useState(false);
@@ -181,13 +181,13 @@ function App() {
     setOrientation(event.target.value);
   };
   const handleSliderA = (event, newValue) => {
-    setSliderA(newValue);
+    setSliderA(newValue/100);
   };
   const handleSliderB = (event, newValue) => {
-    setSliderB(newValue);
+    setSliderB(newValue/100);
   };
   const handleSliderC = (event, newValue) => {
-    setSliderC(newValue);
+    setSliderC(newValue/100);
   };
 
   // submit dialogue
@@ -481,7 +481,7 @@ function App() {
             </div>
             {!checkedMemorable ? (
               <Slider
-                value={sliderA}
+                value={sliderA*100}
                 onChange={handleSliderA}
                 style={{ color: "#6200EE" }}
                 defaultValue={50}
@@ -491,7 +491,7 @@ function App() {
               />
             ) : (
               <Slider
-                value={sliderA}
+                value={sliderA*100}
                 onChange={handleSliderA}
                 defaultValue={50}
                 marks={sliderMarks}
@@ -529,7 +529,7 @@ function App() {
             </div>
             {!checkedNameable ? (
               <Slider
-                value={sliderB}
+                value={sliderB*100}
                 onChange={handleSliderB}
                 style={{ color: "#6200EE" }}
                 defaultValue={50}
@@ -539,7 +539,7 @@ function App() {
               />
             ) : (
               <Slider
-                value={sliderB}
+                value={sliderB*100}
                 onChange={handleSliderB}
                 defaultValue={50}
                 marks={sliderMarks}
@@ -577,7 +577,7 @@ function App() {
             </div>
             {!checkedEmotional ? (
               <Slider
-                value={sliderC}
+                value={sliderC*100}
                 onChange={handleSliderC}
                 style={{ color: "#6200EE" }}
                 defaultValue={50}
@@ -587,7 +587,7 @@ function App() {
               />
             ) : (
               <Slider
-                value={sliderC}
+                value={sliderC*100}
                 onChange={handleSliderC}
                 defaultValue={50}
                 marks={sliderMarks}

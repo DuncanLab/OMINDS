@@ -21,7 +21,7 @@ do
     python3 backend.py current_dir image_directory num_folders num_stimuli memorability nameability emotionality orientationq unique target_directory newname TESTING_ITER
 done
 # TEST 2: variable memorability
-
+python3 backend.py /Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/scripts/parity_testing/python_output/ /Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/scripts/objects/ 2 10 77 21 76 n 0 /Users/alexgordienko/Documents/work/science/duncanlab/OMINDS/scripts/parity_testing/python_output/ 0 1
 # TEST 3: variable nameability
 
 # TEST 4: variable emotionality
