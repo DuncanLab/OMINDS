@@ -12,7 +12,7 @@ This repository will help you get set up with the latest OMINDS build so that yo
 
 ## Getting Started
 
-OMINDS is a native application that you can install on your computer and use offline. It is built with Electron and uses your input through a graphical interface to generate image sets. 
+OMINDS is a native application that you can install on your computer and use offline. It is built with Electron. It is designed for memory researchers interested in assigning object images to different conditions within an experiment. The researcher specifies desired object qualities through a graphical interface and the application selects and divides images from our large, normed stimulus bank. The images are then saved in separate folders, each of which can be assigned to an experimental condition (counterbalanced across participants, if desired). The distributions of intrinsic image memorability are roughly equated across folders, as are other parameters selected by the researcher. A csv file containing the corresponding norming data for each image is also provided.
 
 ### Install the OMINDS App for MacOS
 
@@ -40,19 +40,21 @@ The directory that you choose here will be where all of your image folders and o
 
 ### Step 2: Specify Groups and Images
 
-Next, fill out the text fields under step 2. The first field will specify how many folders you want created, and the second field will specify how many images you would like. 
+Next, fill out the text fields under step 2. The first field will specify how many folders you want created, and the second field will specify how many images you would like per folder. Generally, the number of folders will equal the number of conditions in your design. However, if you have different numbers of stimuli per condition or more complex counterbalancing schemes, you will need to determine the optimal number of groups for your purpose.  
 
 > Note: Since there are 1748 images in the set, please make sure that you are asking for fewer than 1748 images at this point.
 
 ![Choose Groups and Images](/resources/Choose_Groups.png "Choose Groups and Images")
 
-In our example here we chose 5 groups and 10 images per group.
+In our example here we chose 5 groups and 10 images per group. This would correspond to a design with 5 conditions and 10 trials per condition. 
 
 ### Step 3: Choose your orientation question
 
-Here you have the option to select one of the four options to specify an orientation question for your image set. 
+We obtained normative responses to three orientation questions that are commonly used while participants form memories (larger vs. smaller than a shoebox, human-made vs. natural, and indoor vs. outdoor). Here you have the option to select one of these orientation questions if you plan to use it in your experiment. 
 
-If one of these orientation questions are selected, then the software will select only the object images which show a high degree of category agreement across participants (e.g. over 80% of people said that this object belongs inside).
+If one of these orientation questions are selected, then the software will select only the object images which show a high degree of category agreement across participants (e.g., over 80% of people said that this object belongs inside). It will also ensure 50% of images in each folder are commonly given each response. 
+
+> Note: If you select one of these questions, please request an even number of images per group. Also, selecting a question will further reduce the number of viable stimuli. Of all eight answers, we have the smallest number of natural images. 
 
 ![Choose Orientation Question](/resources/Choose_Orientation.png "Choose Orientation Question")
 
@@ -66,13 +68,15 @@ Next, you can make some detailed selections of different stimulus properties whi
 
 Object images’ memorability, nameability, and emotionality were normed by participants, then transformed into a percentile score across the image database. So, a value of 50 on memorability would mean that the software would select for images which were about average memorability across the current image set. 
 
+> Note: Not all images can be at your desired percentile; the more images you need, the further they will stray from your target value. However, we select the images that are closest to your target and match the distributions of each selected parameter across folders. Since all selected attributes are equally weighted in our algorithm, we recommend only selecting the attributes that you really care about if you require a large number of images.  
+
 ### Step 5: Stimuli Uniqueness
 
-Some of the stimuli in the image bank are distinct but of the same object. One such example is airplanes. As you can in the image below, these two stimuli are of different planes, but clearly planes nonetheless.
+While all the stimuli in the image bank are distinct, some are images of the objects that belong to the same basic category. One such example is airplanes. As you can in the image below, these two stimuli are of different kinds of planes, but clearly planes nonetheless.
 
 ![Two Airplanes](/resources/Similar_Stimuli.png "Two Airplanes")
 
-If you would like to remove all such non-unique stimuli, and only keep one of these stimuli (eg. only one airplane) you can click on the switch and set it to "Yes". 
+We identified non-unique stimuli as those that had the same modal response in our normative naming data. If you would like to remove all such non-unique stimuli, and only keep one of these stimuli (eg. only one airplane) you can click on the switch and set it to "Yes". 
 
 ![Specify Uniqueness](/resources/Choose_Uniqueness.png "Specify Uniqueness")
 
@@ -80,7 +84,7 @@ If you would like to remove all such non-unique stimuli, and only keep one of th
 
 ### Step 6: Renaming Stimuli
 
-This switch allows you to choose if you would like your output stimuli to be renamed to something generic instead of maintaining their original database names. This could be helpful if you are scripting and selecting files based on which group they are in. For our example, though, we will uncheck this option.
+This switch allows you to choose if you would like your output stimuli to be renamed to something generic instead of maintaining their original, descriptive database names. This could be helpful if you are scripting and selecting files based on which group they are in. For our example, though, we will uncheck this option.
 
 ![Renaming Stimuli](/resources/Choose_Renaming.png "Renaming Stimuli")
 
