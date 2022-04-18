@@ -58,7 +58,7 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist-all": "electron-builder -m",
-    "start-local": "react-scripts start",
+    "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
